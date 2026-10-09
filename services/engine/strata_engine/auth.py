@@ -640,3 +640,67 @@ def seed_demo() -> None:
 
 
 seed_demo()
+
+
+# ------------------------------------------------------------------ Supabase Auth (Google sign-in)
+# The browser signs in with Google through Supabase Auth and hands the Supabase access token to this endpoint.
+# We confirm it with Supabase (GET /auth/v1/user), then issue a normal STRATA session for that email.
+# A first-time Google user joins a company with its join code and a role (email already verified by Google).
+class SupabaseIn(BaseModel):
+    access_token: str
+    company_code: str | None = None
+    role: str | None = None
+    name: str | None = None
+
+
+def _supabase_user(access_token: str) -> dict[str, Any]:
+    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "").strip()
+    if not url or not key:
+        raise HTTPException(503, "Google sign-in is not set up on this server.")
+    import httpx
+    try:
+        r = httpx.get(f"{url}/auth/v1/user", headers={"apikey": key, "Authorization": f"Bearer {access_token}"}, timeout=10)
+    except httpx.HTTPError:
+        raise HTTPException(502, "Could not reach Supabase to confirm the Google sign-in. Try again.") from None
+    if r.status_code != 200:
+        raise HTTPException(401, "That Google sign-in has expired. Please sign in again.")
+    return r.json()
+
+
+@router.get("/auth/supabase/config")
+def supabase_config() -> dict[str, Any]:
+    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "").strip()
+    return {"enabled": bool(url and key), "url": url or None, "key": key or None}
+
+
+@router.post("/auth/supabase")
+def supabase_signin(body: SupabaseIn) -> dict[str, Any]:
+    su = _supabase_user(body.access_token)
+    email = _email(su.get("email") or "")
+    meta = su.get("user_metadata") or {}
+    google_name = (meta.get("full_name") or meta.get("name") or email.split("@")[0]).strip()[:80]
+    u = _user_by_email(email)
+    if u:
+        if not u["verified"]:
+            _mark_verified(u)
+            u = _user_by_email(email) or u
+        return _session(u)
+    if not body.company_code:
+        return {"status": "join_required", "email": email, "name": google_name}
+    if body.role not in ROLE_LABELS:
+        raise HTTPException(400, "Please pick one of the listed roles.")
+    co = company_by_code(body.company_code)
+    if not co:
+        raise HTTPException(404, "No company has that code. Check it with your Business Head.")
+    if body.role == "business_head" and _has_verified_head(co["id"]):
+        raise HTTPException(403, "This company already has a Business Head. Join with another role.")
+    name = (body.name or google_name).strip()[:80] or google_name
+    uid = "u_" + secrets.token_hex(6)
+    with state._lock:
+        _db().execute("insert into users (id, company_id, name, email, role, pw_hash, verified, prefs, created_at)"
+                      " values (?,?,?,?,?,?,1,?,?)",
+                      (uid, co["id"], name, email, body.role, None, json.dumps(DEFAULT_PREFS), state.wall_now()))
+        _db().commit()
+    return _session(_user_by_email(email) or {})

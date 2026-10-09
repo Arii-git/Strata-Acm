@@ -327,3 +327,8 @@
   .auth-swap, .auth-demo__panel { animation: none; }
   .auth-demo__chev, .switch, .switch::before, .switch__thumb, .steps__item, .af-input, .af-code__box, .segmented__opt { transition: none; }
 }
+
+/* Google sign-in (Supabase Auth) */
+.af-google { justify-content: center; font-weight: 600; color: var(--ink); }
+.af-or { display: flex; align-items: center; gap: var(--sp-3); color: var(--ink-3); font-size: var(--fs-12); }
+.af-or::before, .af-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }

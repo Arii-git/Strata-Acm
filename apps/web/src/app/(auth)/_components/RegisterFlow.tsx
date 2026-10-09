@@ -8,6 +8,7 @@ import { ApiError, apiGet, apiPost, qs } from "@/lib/api/client";
 import { useAuth, type SessionResponse } from "@/lib/auth";
 import type { PersonaKey } from "@/lib/api/types";
 import { Button } from "@/components/ui/Button";
+import { GoogleButton } from "./GoogleButton";
 import { announce } from "@/components/ui/states";
 import {
   CodeInput, DevCodeNote, FormError, PasswordField, PasswordStrength, ROLE_INFO, ResendButton, TextField,
@@ -189,6 +190,7 @@ export function RegisterFlow() {
       <div className="auth-swap" key={step}>
         {step === 1 ? (
           <form className="af-form" onSubmit={onStep1} noValidate>
+            <GoogleButton next={next} label="Sign up with Google" />
             <div className="auth-card__head">
               <h1 id="reg-title" ref={headingRef} tabIndex={-1} className="auth-card__title">Join your company</h1>
               <p className="af-hint">Enter the 6-character code your business head shared with you.</p>

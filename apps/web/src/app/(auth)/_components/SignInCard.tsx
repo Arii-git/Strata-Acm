@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { IconArrowRight, IconChevronDown, IconLogout, IconMail, IconUserCircle } from "@tabler/icons-react";
 import { ApiError, apiGet, apiPost } from "@/lib/api/client";
+import { GoogleButton } from "./GoogleButton";
 import { useAuth, type SessionResponse } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import { announce } from "@/components/ui/states";
@@ -157,6 +158,7 @@ export function SignInCard({ portal = "user" }: { portal?: PortalKind }) {
       <div className="auth-swap" key={mode}>
         {mode === "password" ? (
           <form className="af-form" onSubmit={onPasswordSubmit} noValidate>
+            <GoogleButton next={next} />
             <TextField label="Work email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
             <PasswordField
               inputRef={passwordRef}
