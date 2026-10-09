@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { collectConsoleErrors, resetEngine } from "../shared/engine";
 
-// Every route renders: no console errors, a page template with a question heading, the SYNTHETIC DATA chip,
+// Every route renders: no console errors, a page template with a question heading,
 // no orphan metrics. Full-page screenshots go to tests/screens/after/. Accessibility lives in a11y.spec.ts.
 const SCREENS = join(process.cwd(), "tests", "screens", "after");
 mkdirSync(SCREENS, { recursive: true });
@@ -41,7 +41,6 @@ for (const [name, path] of PAGES) {
     await page.goto(path, { waitUntil: "networkidle" });
     await expect(page.getByTestId("page-template")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 }).first()).not.toBeEmpty();
-    await expect(page.getByText(/SYNTHETIC DATA/).first()).toBeVisible();
     await expect(page.getByTestId("explain-button")).toBeVisible();
     const all = await page.locator("[data-metric]").count();
     const grouped = await page.locator("[data-metric-group] [data-metric]").count();

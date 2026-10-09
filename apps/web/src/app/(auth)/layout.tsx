@@ -10,7 +10,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span className="brand-mark" aria-hidden="true" />
           <span>STRATA</span>
         </Link>
-        <span className="chip chip--synthetic" title="All data in this prototype is synthetic">SYNTHETIC DATA</span>
       </header>
       <main id="main" className="auth-shell__main">{children}</main>
       <footer className="auth-shell__foot">Arihant Chordia · Yogesh R Mehta · The Industry Games 2026</footer>

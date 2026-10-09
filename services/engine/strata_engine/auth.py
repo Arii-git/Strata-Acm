@@ -183,6 +183,13 @@ def _user_by_id(uid: str) -> dict[str, Any] | None:
     return dict(r) if r else None
 
 
+def company_of_token(token: str) -> str | None:
+    """Company id of a valid session token (used by tenancy.CompanyMiddleware), else None."""
+    payload = decode_token(token)
+    u = _user_by_id(str(payload.get("sub"))) if payload else None
+    return str(u["company_id"]) if u else None
+
+
 def _prefs(row: dict[str, Any]) -> dict[str, Any]:
     raw = row.get("prefs")
     try:

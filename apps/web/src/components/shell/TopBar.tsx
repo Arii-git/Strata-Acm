@@ -13,10 +13,6 @@ import { useTheme } from "@/lib/theme";
 import { useViewMode } from "@/lib/viewmode";
 import { activeItem } from "./nav";
 
-export function SyntheticBadge() {
-  return <span className="chip chip--synthetic" title="All data in this prototype is synthetic. No real company data is used.">SYNTHETIC DATA</span>;
-}
-
 /** Engine mode + LLM provider. No longer in the top bar (it lives on Settings / Sources); kept for callers. */
 export function ModeChip({ health, error }: { health: Health | null; error: Error | null }) {
   if (error) return <span className="chip" title={error.message}>Engine: offline</span>;
@@ -148,7 +144,6 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
       <span className="topbar__spacer" />
       <div className="topbar__tools">
         <SimClock simNow={health?.sim_now} />
-        <SyntheticBadge />
         <button type="button" className="icon-btn icon-btn--wide" onClick={onOpenPalette} aria-label="Open command palette (Ctrl+K)" title="Go to page (Ctrl+K)">
           <IconSearch size={16} stroke={1.5} aria-hidden="true" />
           <span className="kbd topbar__hide-md" aria-hidden="true">Ctrl K</span>

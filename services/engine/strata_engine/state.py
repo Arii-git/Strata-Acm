@@ -29,15 +29,30 @@ create table if not exists notebook_entries (id integer primary key autoincremen
 """
 
 
-def conn() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    c = sqlite3.connect(DB_PATH, check_same_thread=False)
+def conn(path: Path = DB_PATH) -> sqlite3.Connection:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    c = sqlite3.connect(path, check_same_thread=False)
     c.row_factory = sqlite3.Row
     c.executescript(SCHEMA)
     return c
 
 
+# _C is the shared database: users, companies, sessions (auth) and the Engineering Notebook live here, and so
+# does the default company's case state. Every other company gets its own file for plans, tasks, audit, etc.
 _C = conn()
+_COMPANY_CONNS: dict[str, sqlite3.Connection] = {}
+
+
+def db() -> sqlite3.Connection:
+    """Case-state connection for the current request's company (tenancy.company())."""
+    from . import tenancy
+    cid = tenancy.company()
+    if cid == tenancy.DEFAULT_COMPANY:
+        return _C
+    with _lock:
+        if cid not in _COMPANY_CONNS:
+            _COMPANY_CONNS[cid] = conn(DB_PATH.with_name(f"{DB_PATH.stem}_{cid}{DB_PATH.suffix}"))
+        return _COMPANY_CONNS[cid]
 
 
 def wall_now() -> str:
@@ -46,25 +61,25 @@ def wall_now() -> str:
 
 def put(collection: str, id_: str, doc: dict[str, Any]) -> None:
     with _lock:
-        _C.execute("insert or replace into docs values (?,?,?)", (collection, id_, json.dumps(doc, default=str)))
-        _C.commit()
+        db().execute("insert or replace into docs values (?,?,?)", (collection, id_, json.dumps(doc, default=str)))
+        db().commit()
 
 
 def get(collection: str, id_: str) -> dict[str, Any] | None:
     with _lock:
-        r = _C.execute("select json from docs where collection=? and id=?", (collection, id_)).fetchone()
+        r = db().execute("select json from docs where collection=? and id=?", (collection, id_)).fetchone()
     return json.loads(r[0]) if r else None
 
 
 def all_(collection: str) -> list[dict[str, Any]]:
     with _lock:
-        rows = _C.execute("select json from docs where collection=? order by rowid", (collection,)).fetchall()
+        rows = db().execute("select json from docs where collection=? order by rowid", (collection,)).fetchall()
     return [json.loads(r[0]) for r in rows]
 
 
 def next_id(collection: str) -> int:
     with _lock:
-        r = _C.execute("select count(*) from docs where collection=?", (collection,)).fetchone()
+        r = db().execute("select count(*) from docs where collection=?", (collection,)).fetchone()
     return int(r[0]) + 1
 
 
@@ -75,23 +90,23 @@ def canonical(row: dict[str, Any]) -> str:
 def audit(actor_type: str, actor: str, action: str, entity_type: str, entity_id: str,
           detail: dict[str, Any] | None = None, at: str | None = None) -> dict[str, Any]:
     with _lock:
-        prev = _C.execute("select hash from audit_log order by id desc limit 1").fetchone()
+        prev = db().execute("select hash from audit_log order by id desc limit 1").fetchone()
         prev_hash = prev[0] if prev else "GENESIS"
         row = {"at": at or SIM_NOW.isoformat(), "wall_at": wall_now(), "actor_type": actor_type, "actor": actor,
                "action": action, "entity_type": entity_type, "entity_id": str(entity_id), "detail": detail or {}}
         h = hashlib.sha256((prev_hash + canonical(row)).encode()).hexdigest()
-        cur = _C.execute("insert into audit_log (at,wall_at,actor_type,actor,action,entity_type,entity_id,detail,prev_hash,hash)"
+        cur = db().execute("insert into audit_log (at,wall_at,actor_type,actor,action,entity_type,entity_id,detail,prev_hash,hash)"
                          " values (?,?,?,?,?,?,?,?,?,?)",
                          (row["at"], row["wall_at"], actor_type, actor, action, entity_type, str(entity_id),
                           json.dumps(detail or {}, default=str), prev_hash, h))
-        _C.commit()
+        db().commit()
         row.update({"id": cur.lastrowid, "prev_hash": prev_hash, "hash": h})
         return row
 
 
 def audit_rows() -> list[dict[str, Any]]:
     with _lock:
-        rows = _C.execute("select * from audit_log order by id").fetchall()
+        rows = db().execute("select * from audit_log order by id").fetchall()
     out = []
     for r in rows:
         d = dict(r)
@@ -117,9 +132,9 @@ def reset_simulated() -> None:
     with _lock:
         humans = [d for d in all_("memory_added") if not str(d.get("authored_by", "")).startswith(("strata-system", "DRAFT"))]
         human_notes = all_("notes")
-        _C.execute("delete from docs where collection not in ('notes')")
-        _C.execute("delete from audit_log")
-        _C.commit()
+        db().execute("delete from docs where collection not in ('notes')")
+        db().execute("delete from audit_log")
+        db().commit()
         for d in humans:
             put("memory_added", d["ref"], d)
         _ = human_notes

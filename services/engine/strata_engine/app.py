@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
-from . import state
+from . import state, tenancy
 from .agents import Retriever, load_memory, run_investigation
 from .config import (ENGAGEMENT, ENGINE_VERSION, FEATURES, LLM_PROVIDER, MODE, ROLE_LABELS, SEED_NAME, SIM_NOW,
                      STORE, STORE_DIR, CATALOG)
@@ -26,6 +26,7 @@ from .taxonomy import CATEGORY_LABEL, STAGE_LABEL, category_of, stage_of
 
 app = FastAPI(title="STRATA engine", version=ENGINE_VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(tenancy.CompanyMiddleware)  # Bearer token -> company for this request
 
 if MODE == "replay":
     from fastapi import Request
@@ -54,7 +55,6 @@ if MODE == "replay":
         return JSONResponse({"detail": "Not recorded in the replay snapshot."}, status_code=404)
 URGENCY = {"critical": 1.0, "high": 0.8, "elevated": 0.6, "watch": 0.4, "healthy": 0.2}
 BUDGET = int(CATALOG["alerting"]["alert_budget_per_persona_per_day"])
-TYPE_LABEL = {"stockist": "Stockist", "chemist_chain": "Chemist chain", "hospital_pharmacy": "Hospital pharmacy", "nephrology_clinic": "Nephrology clinic"}
 SOURCE_LABEL = {"orders": "Orders", "support": "Support", "crm": "CRM", "inventory": "Inventory", "workforce": "Workforce", "finance": "Finance", "docs": "Docs"}
 
 
@@ -66,9 +66,9 @@ def load_tables(seed: str = SEED_NAME) -> dict[str, pd.DataFrame]:
 
 
 class Engine:
-    def __init__(self) -> None:
+    def __init__(self, seed: str = SEED_NAME) -> None:
         self.lock = threading.RLock()
-        self.base = load_tables()
+        self.base = load_tables(seed)
         self.injections: list[dict[str, Any]] = state.all_("lab_injections")
         self.refresh()
 
@@ -79,6 +79,8 @@ class Engine:
                 t = inject(t, inj)
             self.t = t
             self.det: Detection = evaluate(t)
+            for inc in self.det.incidents:
+                inc.title = tenancy.case_title(inc.title)  # industry wording, e.g. "lot" / "consignment batch"
             for inc in self.det.incidents:
                 if inc.account_id and any(i["account_id"] == inc.account_id for i in self.injections):
                     inc.sim_run_id = next(i["run_id"] for i in self.injections if i["account_id"] == inc.account_id)
@@ -158,14 +160,20 @@ def inject_stale_feed(t: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
     return t
 
 
-ENG: Engine | None = None
+ENGINES: dict[str, Engine] = {}
+_ENG_LOCK = threading.Lock()
 
 
 def E() -> Engine:
-    global ENG
-    if ENG is None:
-        ENG = Engine()
-    return ENG
+    """The engine (data estate + detections) of the current request's company, built on first use."""
+    cid = tenancy.company()
+    eng = ENGINES.get(cid)
+    if eng is None:
+        with _ENG_LOCK:
+            eng = ENGINES.get(cid)
+            if eng is None:
+                eng = ENGINES[cid] = Engine(tenancy.dataset(cid))
+    return eng
 
 
 # ------------------------------------------------------------------ helpers
@@ -622,7 +630,7 @@ def accounts(q: str | None = None, type: str | None = None, region: str | None =
             continue
         sev = next((i.severity for i in e.det.incidents if i.account_id == int(aid) and i.kind == "risk"), None)
         from .signals import band
-        items.append({"id": int(aid), "name": a["name"], "type": a["type"], "type_label": TYPE_LABEL[a["type"]], "region": rg, "tier": a["tier"],
+        items.append({"id": int(aid), "name": a["name"], "type": a["type"], "type_label": tenancy.type_label(a["type"]), "region": rg, "tier": a["tier"],
                       "value_12w": round(e.det.value_12w[int(aid)], 2), "risk_score": sc, "severity": sev or band(sc), "open_incidents": open_by.get(int(aid), 0)})
     items.sort(key=lambda x: (-x["risk_score"], -x["value_12w"]))
     return {"items": items}
@@ -639,7 +647,7 @@ def account(aid: int) -> dict[str, Any]:
     med = float(np.nanmedian(roll4(f.units_adj)[k, 3:WEEKS - 5]) / 4)
     inter = f.i[f.i["account_id"] == aid].sort_values("occurred_at", ascending=False).head(10)
     rep = e.reps.loc[int(a["rep_id"])]
-    return {"account": {"id": aid, "name": a["name"], "type": a["type"], "type_label": TYPE_LABEL[a["type"]], "region": e.regions[int(a["region_id"])],
+    return {"account": {"id": aid, "name": a["name"], "type": a["type"], "type_label": tenancy.type_label(a["type"]), "region": e.regions[int(a["region_id"])],
                         "city": a["city"], "tier": a["tier"], "rep": rep["name"], "rep_active": bool(rep["active"]), "onboarded_on": str(a["onboarded_on"])},
             "value_12w": round(e.det.value_12w[aid], 2),
             "trend": {"labels": f.week_labels[-26:], "units": [round(float(x), 1) for x in f.units_adj[k, -26:]], "baseline": round(med, 1)},
@@ -704,7 +712,7 @@ def portfolio_health() -> dict[str, Any]:
                                "label": LABELS.get(top.signal_key), "delta": round(top.delta, 3), "severity": inc.severity, "ref": inc.ref})
     mix = []
     for t_, g in E().acc.groupby("type"):
-        mix.append({"type": t_, "label": TYPE_LABEL[t_], "count": int(len(g)), "value_12w": round(sum(E().det.value_12w[int(a)] for a in g.index), 2)})
+        mix.append({"type": t_, "label": tenancy.type_label(t_), "count": int(len(g)), "value_12w": round(sum(E().det.value_12w[int(a)] for a in g.index), 2)})
     wk = slice(WEEKS - 12, WEEKS)
     return {"index": {"value": round(idx, 1), "delta_4w": round(idx - idx_prev, 1), "provenance": "computed"}, "pillars": pil, "movers": movers[:6],
             "activity": {"weeks": f.week_labels[wk], "orders": [int(x) for x in f.units.sum(axis=0)[wk]],

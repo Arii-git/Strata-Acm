@@ -32,8 +32,8 @@ RUN printf '%s\n' \
     '#!/bin/sh' \
     'set -e' \
     'STORE=/app/data/store' \
-    'if [ ! -f "$STORE/seed_dev/orders.pkl" ] || [ ! -f "$STORE/seed_holdout/manifest.json" ]; then' \
-    '  echo "[strata] first boot: generating synthetic data (seed A + hold-out). Takes about 1-2 minutes..."' \
+    'if [ ! -f "$STORE/seed_dev/orders.pkl" ] || [ ! -f "$STORE/seed_holdout/manifest.json" ] || [ ! -f "$STORE/seed_meridian/orders.pkl" ]; then' \
+    '  echo "[strata] first boot: generating data (seed A, hold-out, 2 demo companies). Takes about 2-3 minutes..."' \
     '  python /app/scripts/seed.py' \
     '  python /app/scripts/eval.py || echo "[strata] eval failed (non-fatal); /eval/latest will be empty until npm run eval"' \
     '  echo "[strata] seed done"' \
@@ -47,7 +47,7 @@ RUN printf '%s\n' \
 # Static inputs (change rarely) before engine code (changes often).
 COPY contracts/ /app/contracts/
 COPY config/ /app/config/
-COPY data/generator.py /app/data/generator.py
+COPY data/generator.py data/profiles.py /app/data/
 COPY data/memory_seed/ /app/data/memory_seed/
 COPY data/snapshots/ /app/data/snapshots/
 # docs/ is small; copied so any engine module that cites or reads docs (e.g. the assistant) finds them.

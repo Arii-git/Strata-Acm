@@ -110,7 +110,7 @@ export default function Landing() {
         ) : null}
       </main>
 
-      <footer className="lp__foot">Prototype with synthetic data. Arihant Chordia · Yogesh R Mehta · The Industry Games 2026</footer>
+      <footer className="lp__foot">Arihant Chordia · Yogesh R Mehta · The Industry Games 2026</footer>
     </div>
   );
 }

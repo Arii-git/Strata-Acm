@@ -76,7 +76,7 @@ def _record(doc: dict[str, Any]) -> str:
 
 def recent_outbox(limit: int = 50) -> list[dict[str, Any]]:
     with state._lock:
-        rows = state._C.execute("select json from docs where collection=? order by rowid desc limit ?",
+        rows = state.db().execute("select json from docs where collection=? order by rowid desc limit ?",
                                 (OUTBOX, int(limit))).fetchall()
     return [json.loads(r[0]) for r in rows]
 
