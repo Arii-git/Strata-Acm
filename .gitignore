@@ -1,0 +1,9 @@
+node_modules/
+.venv/
+.next/
+__pycache__/
+*.pyc
+.env
+data/store/
+apps/web/tsconfig.tsbuildinfo
+tests/screens/*.tmp

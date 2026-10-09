@@ -1,0 +1,17 @@
+{
+  "name": "strata",
+  "private": true,
+  "description": "STRATA Operational Intelligence Console - The Industry Games 2026 prototype for Altygen Biopharm (synthetic data)",
+  "scripts": {
+    "setup": "node scripts/py.mjs --setup && npm --prefix apps/web install && node scripts/py.mjs scripts/seed.py && node scripts/py.mjs scripts/eval.py",
+    "seed": "node scripts/py.mjs scripts/seed.py",
+    "eval": "node scripts/py.mjs scripts/eval.py",
+    "engine": "node scripts/py.mjs -m uvicorn strata_engine.app:app --app-dir services/engine --host 127.0.0.1 --port 8000",
+    "web": "npm --prefix apps/web run dev",
+    "dev": "node scripts/dev.mjs",
+    "check": "node scripts/lint-hex.mjs && node scripts/py.mjs -m ruff check services/engine data scripts --select E9,F && node scripts/py.mjs -m pytest -q tests/engine && npm --prefix apps/web exec tsc -- --noEmit",
+    "test": "node scripts/py.mjs -m pytest -q tests/engine",
+    "demo:reset": "node scripts/py.mjs scripts/demo_reset.py",
+    "routines:tick": "node scripts/py.mjs -c \"import urllib.request;print(urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/routines/tick',method='POST')).read().decode())\""
+  }
+}

@@ -1,0 +1,189 @@
+# STRATA memory seed: standard operating procedures (synthetic, DRAFT - TEAM TO REVIEW).
+# Operational SOPs only. SOP-02 and SOP-09 are QA-gated and contain no clinical advice.
+
+- ref: SOP-01
+  kind: sop
+  title: "Supplier delay on a chronic SKU"
+  cause: supplier_delay
+  body: >
+    Use when a supplier ETA slips on a chronic-therapy SKU and downstream accounts start to run short.
+    The aim is to protect continuity for the most exposed accounts, get a firm date from the supplier and tell customers early.
+    Proactive customer contact is the step most often skipped and the one past incidents show matters most.
+  steps:
+    - {n: 1, action: "Check warehouse stock cover and inbound ETA for the SKU", owner_role: operations_manager, due_in_hours: 4}
+    - {n: 2, action: "Reallocate inventory from lower-priority accounts to the most exposed accounts", owner_role: operations_manager, due_in_hours: 12}
+    - {n: 3, action: "Escalate to the supplier and obtain a revised, committed ETA", owner_role: operations_manager, due_in_hours: 24}
+    - {n: 4, action: "Contact each affected customer, share the revised ETA and agree interim supply", owner_role: account_manager, due_in_hours: 24}
+    - {n: 5, action: "Follow up on open delivery complaints from affected accounts", owner_role: support_manager, due_in_hours: 48}
+    - {n: 6, action: "Monitor fill rate and order volume for affected accounts until supply normalises", owner_role: operations_manager, due_in_hours: 336}
+  requires_role: operations_manager
+  four_eyes: false
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: SOP-02
+  kind: sop
+  title: "Batch complaint triage"
+  cause: batch_quality
+  body: >
+    Use when two or more quality complaints reference the same batch code within a short window.
+    Commercial and support staff classify, preserve and route only; every batch disposition decision belongs to the QA head under four-eyes review.
+    No product, clinical or patient-facing statements are made by anyone outside QA.
+  steps:
+    - {n: 1, action: "Classify the complaints as a possible batch cluster and link each to its batch code", owner_role: support_manager, due_in_hours: 4}
+    - {n: 2, action: "Preserve complaint records, photos and any returned packs as evidence", owner_role: support_manager, due_in_hours: 8}
+    - {n: 3, action: "Route the cluster to the QA head with the evidence pack", owner_role: support_manager, due_in_hours: 8}
+    - {n: 4, action: "QA head and second QA reviewer complete a four-eyes review of the cluster", owner_role: qa_head, due_in_hours: 24}
+    - {n: 5, action: "Record the QA batch decision (hold, release or investigate) and notify operations", owner_role: qa_head, due_in_hours: 48}
+  requires_role: qa_head
+  four_eyes: true
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: SOP-03
+  kind: sop
+  title: "Near-expiry stock redistribution"
+  cause: inventory_mismatch
+  body: >
+    Use when expiry exposure at one location is high while another location or account is short on the same SKU.
+    Move usable lots to where demand exists while they are still within the acceptable remaining shelf-life window.
+    Never offer stock outside the agreed shelf-life terms.
+  steps:
+    - {n: 1, action: "List lots approaching the redistribution cut-off by location", owner_role: operations_manager, due_in_hours: 8}
+    - {n: 2, action: "Match lots to locations or accounts short on the same SKU", owner_role: operations_manager, due_in_hours: 24}
+    - {n: 3, action: "Confirm shelf-life acceptance terms with receiving accounts", owner_role: account_manager, due_in_hours: 48}
+    - {n: 4, action: "Execute inter-location transfers", owner_role: operations_manager, due_in_hours: 72}
+    - {n: 5, action: "Review residual expiry exposure and record write-off candidates", owner_role: operations_manager, due_in_hours: 168}
+  requires_role: operations_manager
+  four_eyes: false
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: SOP-04
+  kind: sop
+  title: "Credit hold and payment plan"
+  cause: payment_stress
+  body: >
+    Use when an account's overdue receivables cross the credit policy threshold or reorder intervals stretch alongside ageing dues.
+    Prefer a structured payment plan that keeps supply flowing over an outright hold, unless the business head decides otherwise.
+    A credit hold is a business decision, not an automated one.
+  steps:
+    - {n: 1, action: "Review receivables ageing and current credit exposure", owner_role: business_head, due_in_hours: 24}
+    - {n: 2, action: "Contact the account to understand the cause of delay", owner_role: account_manager, due_in_hours: 48}
+    - {n: 3, action: "Propose a payment plan with a reduced credit limit", owner_role: account_manager, due_in_hours: 72}
+    - {n: 4, action: "Decide on payment plan or credit hold", owner_role: business_head, due_in_hours: 96}
+    - {n: 5, action: "Apply the decided order release rule in operations", owner_role: operations_manager, due_in_hours: 120}
+  requires_role: business_head
+  four_eyes: false
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: SOP-05
+  kind: sop
+  title: "Rep-vacancy territory cover"
+  cause: field_coverage_gap
+  body: >
+    Use when a territory loses its rep or rep coverage falls well below plan.
+    Assign named interim cover immediately and prioritise accounts by value and visit gap.
+    Hospital accounts always get a named backup, not best-effort visits.
+  steps:
+    - {n: 1, action: "Confirm the vacancy and list accounts in the territory by value and visit gap", owner_role: sales_manager, due_in_hours: 24}
+    - {n: 2, action: "Assign named interim cover from a neighbouring territory", owner_role: sales_manager, due_in_hours: 48}
+    - {n: 3, action: "Introduce the interim rep to key account contacts", owner_role: account_manager, due_in_hours: 72}
+    - {n: 4, action: "Schedule visits to accounts with the largest visit gaps first", owner_role: sales_manager, due_in_hours: 96}
+    - {n: 5, action: "Monitor interaction frequency and orders until the vacancy is filled", owner_role: sales_manager, due_in_hours: 672}
+  requires_role: sales_manager
+  four_eyes: false
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: SOP-06
+  kind: sop
+  title: "Support surge handling"
+  cause: support_capacity
+  body: >
+    Use when response times or the regional support backlog rise well above normal.
+    Rebalance work across desks, triage by account risk and keep field teams informed of expected response windows.
+  steps:
+    - {n: 1, action: "Check backlog and response times by region and queue", owner_role: support_manager, due_in_hours: 2}
+    - {n: 2, action: "Move overflow tickets to less loaded desks", owner_role: support_manager, due_in_hours: 8}
+    - {n: 3, action: "Apply triage priority to at-risk accounts and quality-related tickets", owner_role: support_manager, due_in_hours: 8}
+    - {n: 4, action: "Brief field reps and account managers on expected response windows", owner_role: sales_manager, due_in_hours: 24}
+    - {n: 5, action: "Review staffing and rostering once the backlog clears", owner_role: support_manager, due_in_hours: 168}
+  requires_role: support_manager
+  four_eyes: false
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: SOP-07
+  kind: sop
+  title: "Cross-sell visit on demand growth"
+  cause: demand_shift
+  body: >
+    Use when an account shows sustained volume growth and sources adjacent SKUs elsewhere.
+    Confirm supply before making any offer, and use only approved product information materials.
+  steps:
+    - {n: 1, action: "Confirm the growth trend and identify adjacent SKUs not yet ordered", owner_role: sales_manager, due_in_hours: 48}
+    - {n: 2, action: "Confirm warehouse cover for the proposed SKUs", owner_role: operations_manager, due_in_hours: 48}
+    - {n: 3, action: "Plan the visit with approved product information materials only", owner_role: sales_manager, due_in_hours: 72}
+    - {n: 4, action: "Present the range extension and agree supply terms", owner_role: account_manager, due_in_hours: 168}
+    - {n: 5, action: "Track uptake over the next two order cycles", owner_role: sales_manager, due_in_hours: 720}
+  requires_role: sales_manager
+  four_eyes: false
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: SOP-08
+  kind: sop
+  title: "Data-feed incident"
+  cause: data_quality
+  body: >
+    Use when a source feed is stale or shows duplicate records.
+    Suppress signals that depend on the affected feed so no business action is taken on bad data, then restore and backfill.
+  steps:
+    - {n: 1, action: "Confirm feed freshness lag and duplicate ratio on the Sources page", owner_role: operations_manager, due_in_hours: 2}
+    - {n: 2, action: "Suppress dependent signals and mark affected incidents as data-limited", owner_role: operations_manager, due_in_hours: 4}
+    - {n: 3, action: "Notify the data owner and request a corrected extract", owner_role: operations_manager, due_in_hours: 8}
+    - {n: 4, action: "Deduplicate and backfill once the corrected extract arrives", owner_role: operations_manager, due_in_hours: 24}
+    - {n: 5, action: "Re-enable signals and record the incident in the data health log", owner_role: operations_manager, due_in_hours: 48}
+  requires_role: operations_manager
+  four_eyes: false
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: SOP-09
+  kind: sop
+  title: "Suspected adverse event routing"
+  cause: batch_quality
+  body: >
+    Use whenever any report mentions a possible adverse event, however it arrives.
+    Staff outside QA and safety only classify, preserve and route; they do not assess, diagnose, advise or reply on product or clinical matters.
+    The QA head records the routing decision under four-eyes review.
+  steps:
+    - {n: 1, action: "Classify the report as a suspected adverse event and stop any other handling", owner_role: support_manager, due_in_hours: 1}
+    - {n: 2, action: "Preserve the original report exactly as received, with batch code if given", owner_role: support_manager, due_in_hours: 2}
+    - {n: 3, action: "Route the report to the QA head for onward safety handling", owner_role: support_manager, due_in_hours: 4}
+    - {n: 4, action: "QA head and second reviewer confirm routing under four-eyes review", owner_role: qa_head, due_in_hours: 24}
+    - {n: 5, action: "Record the QA decision and the routing reference", owner_role: qa_head, due_in_hours: 24}
+  requires_role: qa_head
+  four_eyes: true
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: SOP-10
+  kind: sop
+  title: "Escalation matrix"
+  cause: unknown
+  body: >
+    Use when the cause of an incident is unclear or it does not fit another SOP.
+    Assign an owner by signal class, escalate by severity and keep the business head informed of anything high or critical.
+  steps:
+    - {n: 1, action: "Assign an owner by dominant signal class (supply to operations, commercial to sales, service to support, quality to QA)", owner_role: operations_manager, due_in_hours: 4}
+    - {n: 2, action: "Escalate any quality or suspected adverse event signal to the QA head immediately", owner_role: qa_head, due_in_hours: 1}
+    - {n: 3, action: "Escalate high or critical severity incidents to the business head", owner_role: business_head, due_in_hours: 8}
+    - {n: 4, action: "Request an Investigator review to attribute a cause", owner_role: operations_manager, due_in_hours: 24}
+    - {n: 5, action: "Reassign to the matching SOP once a cause is confirmed", owner_role: operations_manager, due_in_hours: 48}
+  requires_role: operations_manager
+  four_eyes: false
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"

@@ -1,0 +1,531 @@
+# STRATA memory seed: past incidents (synthetic, DRAFT - TEAM TO REVIEW).
+# All accounts, regions and SKUs are fictional. No real people, no real brands.
+# INC-017 is the intended best match for the hero supplier-delay scenario.
+
+- ref: INC-001
+  kind: incident
+  title: "Hospital pharmacy short-shipped after phosphate binder supplier slip"
+  date: "2024-11-18"
+  cause: supplier_delay
+  account_type: hospital_pharmacy
+  signals: [fill_rate, eta_slip_count, delivery_delay_days]
+  body: >
+    A contract manufacturer pushed back two consecutive dispatches of a phosphate binder SKU.
+    The hospital pharmacy at Fictiva General received partial deliveries for several weeks.
+    The issue surfaced through repeated ETA revisions rather than through the account itself.
+    We learned to watch ETA slips as an early warning before fill rate visibly drops.
+  resolution: "Split remaining stock across hospital accounts pro rata, escalate supplier, share revised ETA with pharmacy"
+  steps:
+    - {n: 1, action: "Split available stock pro rata across affected hospital accounts", owner_role: operations_manager}
+    - {n: 2, action: "Escalate to supplier and obtain a committed dispatch date", owner_role: operations_manager}
+    - {n: 3, action: "Share the revised ETA with the pharmacy purchase lead", owner_role: account_manager}
+  outcome: partial
+  outcome_score: 0.55
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-002
+  kind: incident
+  title: "Chemist chain switched source during prolonged supplier delay"
+  date: "2025-02-06"
+  cause: supplier_delay
+  account_type: chemist_chain
+  signals: [order_volume_delta, fill_rate, eta_slip_count]
+  body: >
+    An active ingredient shortage at an upstream supplier delayed a chronic CKD SKU for over a month.
+    The Kestrel Pharmacies chain was not contacted until its orders had already stopped.
+    By the time stock returned, the chain had moved the line to an alternative source.
+    The lesson was that silence during a delay costs more than the delay itself.
+  resolution: "Late outreach after stock returned; no interim supply offered"
+  steps:
+    - {n: 1, action: "Restore supply once supplier dispatch arrived", owner_role: operations_manager}
+    - {n: 2, action: "Visit the chain buyer to request reinstatement of the line", owner_role: account_manager}
+  outcome: lost
+  outcome_score: 0.1
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-003
+  kind: incident
+  title: "Nephrology clinic orders paused during iron supplement supplier delay"
+  date: "2025-07-22"
+  cause: supplier_delay
+  account_type: nephrology_clinic
+  signals: [order_volume_delta, stock_cover_days, eta_slip_count, complaint_count_delta]
+  body: >
+    A packaging line breakdown at a supplier delayed an oral iron supplement SKU.
+    The Riverbend Kidney Clinic paused orders and logged a delivery complaint.
+    Operations noticed the low stock cover at the regional warehouse a few days late.
+    Supply recovered, but the clinic reduced its standing order for the following quarter.
+  resolution: "Escalate supplier, contact clinic with revised ETA, partial reallocation from regional buffer"
+  steps:
+    - {n: 1, action: "Escalate supplier and confirm repair timeline", owner_role: operations_manager}
+    - {n: 2, action: "Release part of the regional buffer to the clinic", owner_role: operations_manager}
+    - {n: 3, action: "Call the clinic with the revised ETA", owner_role: account_manager}
+  outcome: partial
+  outcome_score: 0.6
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-004
+  kind: incident
+  title: "Stockist ran dry on a high-velocity renal SKU before month-end"
+  date: "2024-12-12"
+  cause: channel_stockout
+  account_type: stockist
+  signals: [stock_cover_days, fill_rate, reorder_interval_drift]
+  body: >
+    A regional stockist under-ordered ahead of a holiday period and ran out of a high-velocity SKU.
+    Downstream chemists began reporting unavailability through field reps.
+    Our warehouse had stock; the gap was in the channel, not upstream.
+    An expedited replenishment closed the gap within days.
+  resolution: "Expedite replenishment from warehouse, agree a minimum stock norm with the stockist"
+  steps:
+    - {n: 1, action: "Raise an expedited dispatch from the nearest warehouse", owner_role: operations_manager}
+    - {n: 2, action: "Agree a minimum holding norm with the stockist", owner_role: account_manager}
+    - {n: 3, action: "Inform field reps that stock is restored", owner_role: sales_manager}
+  outcome: resolved
+  outcome_score: 0.85
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-005
+  kind: incident
+  title: "Chemist chain outlets out of stock after central DC transfer delay"
+  date: "2025-04-03"
+  cause: channel_stockout
+  account_type: chemist_chain
+  signals: [stock_cover_days, fill_rate, order_volume_delta]
+  body: >
+    The Northgate Chemists central distribution centre delayed inter-store transfers during a system migration.
+    Several outlets showed empty shelves while the chain's central stock was healthy.
+    We noticed via a dip in outlet-level orders routed through the stockist.
+    Direct-to-outlet dispatch for a short window bridged the gap.
+  resolution: "Temporary direct dispatch to affected outlets, coordinate with chain logistics"
+  steps:
+    - {n: 1, action: "Identify affected outlets with the chain logistics lead", owner_role: account_manager}
+    - {n: 2, action: "Arrange temporary direct dispatch to those outlets", owner_role: operations_manager}
+    - {n: 3, action: "Confirm normal transfers resumed before stopping direct dispatch", owner_role: operations_manager}
+  outcome: customer_retained
+  outcome_score: 0.8
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-006
+  kind: incident
+  title: "Hospital pharmacy stockout from missed tender call-off"
+  date: "2026-01-19"
+  cause: channel_stockout
+  account_type: hospital_pharmacy
+  signals: [stock_cover_days, reorder_interval_drift, fill_rate]
+  body: >
+    The hospital pharmacy at Lakeview Medical Centre missed a scheduled call-off under its annual tender.
+    Pharmacy stock ran low before anyone on either side noticed.
+    The reorder interval had been drifting for weeks, which was the earliest sign.
+    The account was recovered but the procurement relationship was strained.
+  resolution: "Emergency call-off processed, reorder reminder cadence agreed with procurement"
+  steps:
+    - {n: 1, action: "Process an emergency call-off against the tender", owner_role: operations_manager}
+    - {n: 2, action: "Agree a reorder reminder cadence with hospital procurement", owner_role: account_manager}
+  outcome: resolved
+  outcome_score: 0.7
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-007
+  kind: incident
+  title: "Warehouse system showed stock that was physically unavailable"
+  date: "2025-01-27"
+  cause: inventory_mismatch
+  account_type: stockist
+  signals: [stock_cover_days, fill_rate, delivery_delay_days]
+  body: >
+    Orders from a stockist were confirmed against system stock that turned out to be quarantined.
+    Dispatches were short and the stockist was given inaccurate ETAs.
+    A cycle count revealed the quarantine flag had not synced to the order system.
+    The sync rule was fixed and the stockist was given priority dispatch.
+  resolution: "Cycle count, fix quarantine sync, priority dispatch to affected stockist"
+  steps:
+    - {n: 1, action: "Run a cycle count on the affected SKU locations", owner_role: operations_manager}
+    - {n: 2, action: "Correct the quarantine status sync with the IT team", owner_role: operations_manager}
+    - {n: 3, action: "Give the stockist a corrected ETA and priority dispatch", owner_role: account_manager}
+  outcome: resolved
+  outcome_score: 0.8
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-008
+  kind: incident
+  title: "Near-expiry stock stranded at one depot while another ran short"
+  date: "2025-06-10"
+  cause: inventory_mismatch
+  account_type: chemist_chain
+  signals: [expiry_exposure_value, stock_cover_days, fill_rate]
+  body: >
+    One depot held a large lot approaching expiry while a neighbouring depot could not fill chain orders.
+    The imbalance was visible only when expiry exposure was reviewed at month-end.
+    A redistribution moved usable stock to where demand was before the expiry window closed.
+    We now review expiry exposure alongside cover days rather than separately.
+  resolution: "Redistribute near-expiry stock to the short depot within the usable window"
+  steps:
+    - {n: 1, action: "Identify lots within the redistribution window", owner_role: operations_manager}
+    - {n: 2, action: "Transfer usable lots to the short depot", owner_role: operations_manager}
+    - {n: 3, action: "Confirm acceptance terms with the chain buyer", owner_role: account_manager}
+  outcome: resolved
+  outcome_score: 0.75
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-009
+  kind: incident
+  title: "Nephrology clinic received wrong pack size after master data error"
+  date: "2026-03-05"
+  cause: inventory_mismatch
+  account_type: nephrology_clinic
+  signals: [delivery_delay_days, complaint_count_delta, fill_rate]
+  body: >
+    A pack size mapping error in item master data caused the Hillcrest Renal Clinic to receive the wrong presentation.
+    The clinic raised a delivery complaint and returned the consignment.
+    The error affected only one SKU code and was traced within a few days.
+    The correct stock was dispatched and the mapping was locked behind a review step.
+  resolution: "Correct item master mapping, replace consignment, add review step for master data edits"
+  steps:
+    - {n: 1, action: "Correct the pack size mapping in item master", owner_role: operations_manager}
+    - {n: 2, action: "Arrange return and replacement consignment", owner_role: operations_manager}
+    - {n: 3, action: "Close the complaint with the clinic", owner_role: support_manager}
+  outcome: customer_retained
+  outcome_score: 0.8
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-010
+  kind: incident
+  title: "Cluster of packaging complaints on one batch from a stockist region"
+  date: "2025-03-14"
+  cause: batch_quality
+  account_type: stockist
+  signals: [batch_complaint_cluster, complaint_count_delta]
+  body: >
+    Several chemists served by one stockist reported damaged blister packs from the same batch.
+    The complaints clustered on a single batch code within a short period.
+    The cluster was routed to the QA head, who placed the batch on hold pending investigation.
+    Commercial teams made no product statements and directed all queries to QA.
+  resolution: "Route to QA head, four-eyes review of the cluster, batch hold decision by QA"
+  steps:
+    - {n: 1, action: "Classify complaints and link them to the batch code", owner_role: support_manager}
+    - {n: 2, action: "Preserve complaint records and retained samples", owner_role: support_manager}
+    - {n: 3, action: "Route the cluster to the QA head for four-eyes review", owner_role: qa_head}
+    - {n: 4, action: "Record the QA batch hold decision and notify operations", owner_role: qa_head}
+  outcome: resolved
+  outcome_score: 0.85
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-011
+  kind: incident
+  title: "Hospital pharmacy reported a visual defect in one batch"
+  date: "2025-09-02"
+  cause: batch_quality
+  account_type: hospital_pharmacy
+  signals: [batch_complaint_cluster, complaint_count_delta, suspected_ae_flag]
+  body: >
+    The pharmacy at Fictiva General reported a visual defect in tablets from one batch.
+    One report was flagged as a suspected adverse event and was routed separately to the safety process.
+    The QA head ran a four-eyes review and decided on a precautionary batch hold.
+    The account was kept informed of process status only, with no product or clinical commentary from commercial staff.
+  resolution: "Route to QA head, four-eyes review, batch hold decision by QA; suspected AE routed to safety process"
+  steps:
+    - {n: 1, action: "Classify the report and separate the suspected adverse event", owner_role: support_manager}
+    - {n: 2, action: "Preserve evidence and batch documentation", owner_role: support_manager}
+    - {n: 3, action: "Route to the QA head for four-eyes review", owner_role: qa_head}
+    - {n: 4, action: "Record the QA batch hold decision", owner_role: qa_head}
+  outcome: escalated
+  outcome_score: 0.7
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-012
+  kind: incident
+  title: "Slow QA routing on a chemist chain batch complaint"
+  date: "2026-05-11"
+  cause: batch_quality
+  account_type: chemist_chain
+  signals: [batch_complaint_cluster, complaint_count_delta, response_time_delta]
+  body: >
+    Outlets in the Kestrel Pharmacies chain reported label legibility issues on one batch.
+    The complaints sat in the general support queue before being recognised as a cluster.
+    Once routed, the QA head completed a four-eyes review and recorded a batch decision.
+    The delay frustrated the chain and it reduced orders for a period.
+  resolution: "Route to QA head, four-eyes review, batch hold decision by QA; add cluster auto-routing"
+  steps:
+    - {n: 1, action: "Classify the complaints as a batch cluster", owner_role: support_manager}
+    - {n: 2, action: "Route to the QA head for four-eyes review", owner_role: qa_head}
+    - {n: 3, action: "Record the QA decision and inform the account of process status", owner_role: qa_head}
+  outcome: partial
+  outcome_score: 0.5
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-013
+  kind: incident
+  title: "Territory vacancy left nephrology clinics unvisited"
+  date: "2025-05-19"
+  cause: field_coverage_gap
+  account_type: nephrology_clinic
+  signals: [interaction_frequency_delta, prescriber_visit_gap_days, rep_coverage_ratio, order_volume_delta]
+  body: >
+    A rep resignation left a territory uncovered for several weeks.
+    Visit gaps grew at nephrology clinics and orders softened in parallel.
+    Coverage was restored by assigning a neighbouring rep until the vacancy was filled.
+    Most accounts recovered once visits resumed.
+  resolution: "Assign neighbouring rep as interim cover, prioritise high-value clinics"
+  steps:
+    - {n: 1, action: "Assign interim cover from a neighbouring territory", owner_role: sales_manager}
+    - {n: 2, action: "Prioritise visits to the highest-value clinics", owner_role: sales_manager}
+    - {n: 3, action: "Introduce the interim rep to clinic contacts", owner_role: account_manager}
+  outcome: customer_retained
+  outcome_score: 0.8
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-014
+  kind: incident
+  title: "Hospital pharmacy relationship lapsed during long rep absence"
+  date: "2025-10-08"
+  cause: field_coverage_gap
+  account_type: hospital_pharmacy
+  signals: [interaction_frequency_delta, prescriber_visit_gap_days, rep_coverage_ratio]
+  body: >
+    A long-term rep absence was not backfilled at the Lakeview Medical Centre pharmacy.
+    Formulary review meetings were missed and a competing product gained position.
+    The gap was noticed only when the next tender cycle opened.
+    We learned that hospital accounts need named backup coverage, not best-effort visits.
+  resolution: "Late reassignment of coverage after tender cycle opened"
+  steps:
+    - {n: 1, action: "Assign a named backup rep for the account", owner_role: sales_manager}
+    - {n: 2, action: "Request a meeting with pharmacy procurement", owner_role: account_manager}
+  outcome: lost
+  outcome_score: 0.15
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-015
+  kind: incident
+  title: "Stockist orders dipped after rep focus shifted to new launch"
+  date: "2026-02-16"
+  cause: field_coverage_gap
+  account_type: stockist
+  signals: [interaction_frequency_delta, order_volume_delta, rep_coverage_ratio]
+  body: >
+    Reps were redirected to a new product launch and routine stockist calls dropped off.
+    Order volumes at mid-sized stockists softened over the following weeks.
+    A rebalanced call plan restored routine contact without pausing the launch.
+    Orders recovered within a cycle.
+  resolution: "Rebalance call plan to restore routine stockist contact"
+  steps:
+    - {n: 1, action: "Rebalance the call plan across launch and routine accounts", owner_role: sales_manager}
+    - {n: 2, action: "Schedule catch-up calls with affected stockists", owner_role: account_manager}
+  outcome: resolved
+  outcome_score: 0.8
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-016
+  kind: incident
+  title: "Stockist under credit strain stretched reorder intervals"
+  date: "2025-08-04"
+  cause: payment_stress
+  account_type: stockist
+  signals: [overdue_receivable_ratio, reorder_interval_drift, order_value_delta]
+  body: >
+    A stockist's overdue receivables rose and its reorder intervals stretched.
+    Finance flagged the account before a credit hold was triggered automatically.
+    A structured payment plan kept supply flowing while the overdue balance came down.
+    The account normalised over the following quarter.
+  resolution: "Agree a payment plan with finance, keep supply on reduced credit limit"
+  steps:
+    - {n: 1, action: "Review receivables and credit exposure", owner_role: business_head}
+    - {n: 2, action: "Agree a payment plan with the stockist", owner_role: account_manager}
+    - {n: 3, action: "Adjust order release to the reduced credit limit", owner_role: operations_manager}
+  outcome: customer_retained
+  outcome_score: 0.75
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-017
+  kind: incident
+  title: "Stockist orders fell after CKD-MBD binder supplier slip"
+  date: "2025-11-14"
+  cause: supplier_delay
+  account_type: stockist
+  signals: [order_volume_delta, fill_rate, complaint_count_delta, response_time_delta, interaction_frequency_delta, stock_cover_days, eta_slip_count]
+  body: >
+    A supplier delay on a CKD-MBD phosphate binder SKU left the Meridian Distributors stockist short for several weeks.
+    Fill rate dropped, the stockist's orders fell for about a month, and delivery complaints piled up while support responses slowed.
+    The pattern was noticed when repeated ETA slips coincided with falling warehouse stock cover and fewer rep interactions.
+    Operations reallocated inventory from lower-priority accounts and escalated the supplier, and the account manager called the stockist to agree interim supply.
+    The stockist stayed with us; the lesson was that early, proactive contact during a supplier slip protects the relationship.
+  resolution: "Reallocate inventory from lower-priority accounts, escalate supplier, contact customer"
+  steps:
+    - {n: 1, action: "Reallocate stock of the delayed SKU from lower-priority accounts to the affected stockist", owner_role: operations_manager}
+    - {n: 2, action: "Escalate to the supplier and obtain a revised, committed ETA", owner_role: operations_manager}
+    - {n: 3, action: "Call the stockist, share the revised ETA and agree interim supply quantities", owner_role: account_manager}
+    - {n: 4, action: "Follow up on the stockist's open delivery complaints until closed", owner_role: support_manager}
+  outcome: customer_retained
+  outcome_score: 0.9
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-018
+  kind: incident
+  title: "Chemist chain payment delays after its own funding squeeze"
+  date: "2026-04-21"
+  cause: payment_stress
+  account_type: chemist_chain
+  signals: [overdue_receivable_ratio, order_value_delta]
+  body: >
+    The Northgate Chemists chain delayed payments across suppliers during a funding squeeze.
+    Our receivables aged and the chain cut order value to essentials.
+    A credit hold was placed after negotiations stalled, and the chain moved volume elsewhere.
+    The overdue balance was eventually recovered, but the commercial relationship did not recover.
+  resolution: "Credit hold after stalled payment negotiation"
+  steps:
+    - {n: 1, action: "Escalate overdue balance to finance and business head", owner_role: business_head}
+    - {n: 2, action: "Place the account on credit hold", owner_role: business_head}
+    - {n: 3, action: "Negotiate recovery of the overdue balance", owner_role: account_manager}
+  outcome: lost
+  outcome_score: 0.2
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-019
+  kind: incident
+  title: "Nephrology clinic billing dispute held up payments"
+  date: "2026-06-09"
+  cause: payment_stress
+  account_type: nephrology_clinic
+  signals: [overdue_receivable_ratio, complaint_count_delta, reorder_interval_drift]
+  body: >
+    The Riverbend Kidney Clinic withheld payment over a disputed invoice.
+    Overdue receivables grew and a billing complaint was logged.
+    The dispute was traced to a duplicated credit note and corrected.
+    Payments resumed once the corrected statement was shared.
+  resolution: "Reconcile disputed invoice, issue corrected statement, resume normal terms"
+  steps:
+    - {n: 1, action: "Reconcile the disputed invoice and credit notes", owner_role: business_head}
+    - {n: 2, action: "Share the corrected statement with the clinic", owner_role: account_manager}
+    - {n: 3, action: "Close the billing complaint", owner_role: support_manager}
+  outcome: resolved
+  outcome_score: 0.85
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-020
+  kind: incident
+  title: "Regional support backlog after seasonal ticket surge"
+  date: "2025-01-08"
+  cause: support_capacity
+  account_type: stockist
+  signals: [response_time_delta, support_backlog_region, complaint_count_delta]
+  body: >
+    A post-holiday surge in delivery queries overwhelmed one regional support desk.
+    Response times stretched and stockists began escalating through field reps.
+    Tickets were rebalanced to another region's desk and a triage rule was introduced.
+    The backlog cleared within about a week.
+  resolution: "Rebalance tickets across regional desks, introduce triage rule"
+  steps:
+    - {n: 1, action: "Move overflow tickets to a less loaded regional desk", owner_role: support_manager}
+    - {n: 2, action: "Introduce a triage rule prioritising stockist delivery queries", owner_role: support_manager}
+    - {n: 3, action: "Brief field reps on the expected response window", owner_role: sales_manager}
+  outcome: resolved
+  outcome_score: 0.85
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-021
+  kind: incident
+  title: "Hospital pharmacy escalated over unanswered queries"
+  date: "2025-12-03"
+  cause: support_capacity
+  account_type: hospital_pharmacy
+  signals: [response_time_delta, support_backlog_region]
+  body: >
+    Two support staff were on leave at once and hospital queries went unanswered for days.
+    The pharmacy at Fictiva General escalated to the business head.
+    A named support contact was assigned to hospital accounts from then on.
+    The account accepted the fix after a review call.
+  resolution: "Assign named support contact for hospital accounts, cover leave overlaps"
+  steps:
+    - {n: 1, action: "Assign a named support contact for hospital accounts", owner_role: support_manager}
+    - {n: 2, action: "Hold a review call with the pharmacy", owner_role: account_manager}
+    - {n: 3, action: "Add a leave-overlap check to support rostering", owner_role: support_manager}
+  outcome: customer_retained
+  outcome_score: 0.75
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-022
+  kind: incident
+  title: "Chemist chain complaints aged during support tool migration"
+  date: "2026-07-15"
+  cause: support_capacity
+  account_type: chemist_chain
+  signals: [response_time_delta, complaint_count_delta, support_backlog_region]
+  body: >
+    A support tool migration left some chain complaints invisible in the new queue.
+    Response times rose sharply for the Kestrel Pharmacies chain.
+    Missing tickets were recovered from the old system and worked down by a temporary squad.
+    The chain remained a customer but asked for a monthly service review.
+  resolution: "Recover missing tickets, temporary squad to clear backlog, monthly service review"
+  steps:
+    - {n: 1, action: "Recover tickets missing from the new queue", owner_role: support_manager}
+    - {n: 2, action: "Stand up a temporary squad to clear the backlog", owner_role: support_manager}
+    - {n: 3, action: "Set up a monthly service review with the chain", owner_role: account_manager}
+  outcome: partial
+  outcome_score: 0.6
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-023
+  kind: incident
+  title: "Nephrology clinic growth opened a cross-sell for an adjacent CKD SKU"
+  date: "2025-09-25"
+  cause: demand_shift
+  account_type: nephrology_clinic
+  signals: [opportunity_volume_growth, order_volume_delta, interaction_frequency_delta]
+  body: >
+    The Hillcrest Renal Clinic expanded its dialysis unit and its orders for our binder SKU grew steadily.
+    The rep noticed that the clinic sourced an adjacent CKD SKU from elsewhere.
+    A cross-sell visit with approved product information and supply terms added the SKU to the clinic's orders.
+    The growth held over the following quarters.
+  resolution: "Cross-sell visit for adjacent SKU, align supply terms"
+  steps:
+    - {n: 1, action: "Plan a cross-sell visit with approved product information materials", owner_role: sales_manager}
+    - {n: 2, action: "Agree supply terms for the adjacent SKU", owner_role: account_manager}
+    - {n: 3, action: "Confirm stock cover for the added volume", owner_role: operations_manager}
+  outcome: resolved
+  outcome_score: 0.9
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
+
+- ref: INC-024
+  kind: incident
+  title: "Stockist demand rose in a new catchment, cross-sell landed"
+  date: "2026-08-12"
+  cause: demand_shift
+  account_type: stockist
+  signals: [opportunity_volume_growth, order_value_delta, order_volume_delta]
+  body: >
+    A new dialysis centre opened in the Meridian Distributors catchment and stockist orders rose.
+    The account manager proposed adding two adjacent renal SKUs to the stockist's range.
+    Operations confirmed supply before the offer was made.
+    The stockist took both lines and order value grew.
+  resolution: "Cross-sell adjacent renal SKUs after confirming supply"
+  steps:
+    - {n: 1, action: "Confirm warehouse cover for the proposed SKUs", owner_role: operations_manager}
+    - {n: 2, action: "Present the range extension to the stockist", owner_role: account_manager}
+    - {n: 3, action: "Track uptake over the next two order cycles", owner_role: sales_manager}
+  outcome: resolved
+  outcome_score: 0.85
+  provenance: synthetic
+  authored_by: "DRAFT - TEAM TO REVIEW"
