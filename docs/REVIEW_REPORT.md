@@ -33,7 +33,7 @@ Extras: `npm run eval`, `npm run snapshot` then `npm run engine:replay` (offline
 | B 20261010 (hold-out) | 0.875 | 7/8 | 1.0 | 1 (decoy S12 flagged as an opportunity) | S09 opportunity not detected |
 S02/S03 are not planted in this build (cut). Lead time is not computed (it needs a backtest). Seed B uses the same generator with a different random draw, so it is **not** independent validation.
 
-Scale (`npm run scale`, 2,400 accounts, single-tenant laptop measurement): see `data/store/scale_latest.json`; the numbers are copied into the "Scale" line below once the run finishes.
+**Scale** (`npm run scale`, 2,400 accounts = 10×, 1.38M order rows, single-tenant measurement on the build laptop, provenance computed): the hero is still detected as **critical**; `GET /risks` p95 is **11 ms**; the full engine evaluate() took **119 s** on the code before two O(n²) loops were removed (at 240 accounts evaluate() fell from ~1.5 s to ~1.1 s). A re-run after the fix ran out of memory: the laptop had only 2.4 GB free with the dev servers and other apps running. Re-run `npm run scale` on a free machine to get the post-fix number. This is not a production benchmark.
 
 ## Deck deltas (details in DECK_DELTAS.md)
 Risk score 100 (deck 91); INC-017 similarity 0.60 (deck 0.89, so the slide must change); Health 82.0 (deck 84); 7 risks + 1 opportunity (deck "8 emerging risks"); 4 high/critical (deck 3); the slide 7 cause wording; slide 11 stack (no Postgres/pgvector/Redis/Docker/LangGraph in the prototype).
