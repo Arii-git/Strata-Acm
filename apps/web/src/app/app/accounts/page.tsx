@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useWording } from "@/lib/industry";
 import Link from "next/link";
 import {
   DataTable,
@@ -26,10 +27,9 @@ interface AccountLive {
   value_12w: number; risk_score: number; severity: Severity; open_incidents: number;
 }
 
-const CUSTOMER_DEFINITION =
-  "A customer in STRATA is a B2B channel account of a nephrology pharma company: stockist, chemist chain, hospital pharmacy or nephrology clinic. No patient data is used.";
 
 export default function AccountsPage() {
+  const CUSTOMER_DEFINITION = useWording().customer;
   const router = useRouter();
   const { mode } = useViewMode();
   const [q, setQ] = useState("");

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { ErrorState, Metric, MetricGroup, PageTemplate, Tabs } from "@/components/ui";
 import { StrataLoader } from "@/components/ui/Loader";
 import { useApi } from "@/lib/api/client";
+import { useAuth } from "@/lib/auth";
+import { industryKey } from "@/lib/industry";
 import { fmtNum } from "@/lib/format";
 import { CompareView } from "@/components/features/lab/CompareView";
 import { LiveLoop } from "@/components/features/lab/LiveLoop";
@@ -34,6 +36,10 @@ export default function LabPage() {
   const [tab, setTab] = useState("library");
 
   useEffect(() => { setView(readView()); }, []);
+  // open the library on the signed-in company's own industry (they can still pick "All")
+  const { user } = useAuth();
+  const userIndustry = user ? industryKey(user.company_industry) : null;
+  useEffect(() => { if (userIndustry) setIndustry(userIndustry); }, [userIndustry]);
   const go = (v: View) => { setView(v); setTab("library"); writeView(v); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   const c = catalog.data;

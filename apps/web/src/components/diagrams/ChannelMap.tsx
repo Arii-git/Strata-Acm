@@ -1,14 +1,10 @@
 "use client";
 
 import { fmtINR } from "@/lib/format";
+import { useWording } from "@/lib/industry";
 
-/** Account types in the synthetic dataset (accounts.type). Labels are plural, for the channel diagram. */
-export const CHANNEL_TYPES: { key: string; label: string }[] = [
-  { key: "chemist_chain", label: "Chemist chains" },
-  { key: "hospital_pharmacy", label: "Hospital pharmacies" },
-  { key: "nephrology_clinic", label: "Clinics (nephrology)" },
-];
-const STOCKIST = { key: "stockist", label: "Stockists" };
+/** Downstream account types (accounts.type); labels come from the signed-in company's industry wording. */
+const CHANNEL_KEYS = ["chemist_chain", "hospital_pharmacy", "nephrology_clinic"] as const;
 
 export interface ChannelBlastRow { account_id: string | number; exposure_value: number }
 
@@ -22,6 +18,9 @@ interface Box { key: string; label: string; x: number; y: number; w: number; h: 
 export function ChannelMap({
   accountType, accountName, blast, typeById,
 }: { accountType: string | null; accountName?: string | null; blast: ChannelBlastRow[]; typeById: Record<string, string> }) {
+  const words = useWording();
+  const CHANNEL_TYPES = CHANNEL_KEYS.map((key) => ({ key, label: words.channel[key] }));
+  const STOCKIST = { key: "stockist", label: words.channel.stockist };
   const exposed: Record<string, { n: number; value: number }> = {};
   let unknown = 0;
   for (const b of blast) {
@@ -32,7 +31,7 @@ export function ChannelMap({
     exposed[t].value += b.exposure_value || 0;
   }
   const boxes: Box[] = [
-    { key: "maker", label: "Manufacturer", x: 8, y: 96, w: 150, h: 60 },
+    { key: "maker", label: words.source, x: 8, y: 96, w: 150, h: 60 },
     { key: STOCKIST.key, label: STOCKIST.label, x: 210, y: 96, w: 180, h: 60 },
     ...CHANNEL_TYPES.map((t, i) => ({ key: t.key, label: t.label, x: 460, y: 8 + i * 88, w: 252, h: 60 })),
   ];

@@ -33,7 +33,7 @@ function saveConversation(msgs: DockMessage[]): void {
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 function providerChip(s: AssistantStatus | null): { text: string; title: string } {
-  if (s?.provider === "gemini" && s.model) return { text: `Gemini / ${s.model}`, title: "Answers use Gemini with STRATA's read-only evidence packet" };
+  if (s?.provider === "gemini" && s.model) return { text: `Gemini / ${s.model}`, title: "Answers use Gemini with STRATA's read-only data tools" };
   if (!s) return { text: "Checking…", title: "Checking the assistant provider" };
   if (s.provider === "anthropic" && s.model) return { text: `Anthropic · ${s.model}`, title: "Answers use Anthropic with STRATA's read-only tools" };
   return { text: "Keyless · templates", title: "No API key set: answers come from STRATA's deterministic templates" };
