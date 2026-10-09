@@ -25,6 +25,32 @@ from .signals import LABELS, D0, WEEKS, roll4, week_start
 
 app = FastAPI(title="STRATA engine", version=ENGINE_VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+if MODE == "replay":
+    from fastapi import Request
+    from fastapi.responses import JSONResponse
+
+    from .config import DATA
+
+    _SNAP = json.loads((DATA / "snapshots" / "replay.json").read_text(encoding="utf-8"))
+
+    @app.middleware("http")
+    async def replay_mw(request: Request, call_next):  # type: ignore[no-untyped-def]
+        """A20 replay: serve recorded responses only. No data store, no keys, no network; writes are refused."""
+        if request.url.path in ("/openapi.json", "/docs"):
+            return await call_next(request)
+        key = f"{request.method} {request.url.path}" + (f"?{request.url.query}" if request.url.query else "")
+        if request.url.path == "/health":
+            return JSONResponse({"status": "ok", "mode": "replay", "store": "snapshot", "llm_provider": "none", "retrieval": "tfidf",
+                                 "sim_now": SIM_NOW.isoformat(), "features": FEATURES, "seed": SEED_NAME, "engine_version": ENGINE_VERSION})
+        if key in _SNAP:
+            return JSONResponse(_SNAP[key])
+        base = f"{request.method} {request.url.path}"
+        if base in _SNAP:
+            return JSONResponse(_SNAP[base])
+        if request.method != "GET":
+            return JSONResponse({"detail": "Replay mode is read-only: this action was not pre-recorded. Switch to live mode to run it."}, status_code=409)
+        return JSONResponse({"detail": "Not recorded in the replay snapshot."}, status_code=404)
 URGENCY = {"critical": 1.0, "high": 0.8, "elevated": 0.6, "watch": 0.4, "healthy": 0.2}
 BUDGET = int(CATALOG["alerting"]["alert_budget_per_persona_per_day"])
 TYPE_LABEL = {"stockist": "Stockist", "chemist_chain": "Chemist chain", "hospital_pharmacy": "Hospital pharmacy", "nephrology_clinic": "Nephrology clinic"}
@@ -255,7 +281,7 @@ def incident(ref: str) -> dict[str, Any]:
     d.update({
         "onset_estimated_at": inc.onset, "first_detected_at": SIM_NOW.isoformat(),
         "silent_period_days": inc.silent_period_days, "silent_period_basis": inc.silent_basis,
-        "evidence": [s.to_dict("supporting" if s.scope != "account_sku" else "context") for s in inc.evidence] + [s.to_dict("context") for s in inc.context],
+        "evidence": [s.to_dict("supporting") for s in inc.evidence] + [s.to_dict("context") for s in inc.context],
         "blast_radius": [{**b, "account_name": acc_name(b["account_id"])} for b in inc.blast],
         "investigation": st.get("investigation"), "plan": plan,
         "approvals": plan["approvals"] if plan else [],
@@ -277,10 +303,20 @@ def investigate(ref: str) -> dict[str, Any]:
     state.put("runs", run_id, {"incident_id": ref, **res})
     for st in res["steps"]:
         state.audit("agent", st["agent"], "agent.step", "incident", ref, {"run_id": run_id, "summary": st["summary"]})
-    pid = f"PLAN-{state.next_id('plans'):04d}"
-    plan = {"id": pid, "incident_id": ref, "version": 1, "status": "awaiting_approval", **plan_in, "created_by_run": run_id}
-    state.put("plans", pid, plan)
     st = inc_state(ref)
+    prev = state.get("plans", st["plan_id"]) if st.get("plan_id") else None
+    if prev and prev["status"] in ("approved", "modified"):
+        # a plan is already executing: record the new trace but do not propose a second plan
+        st.update({"investigation": res})
+        state.put("incident_state", ref, st)
+        return res
+    if prev and prev["status"] == "awaiting_approval":
+        prev["status"] = "superseded"
+        state.put("plans", prev["id"], prev)
+        state.audit("agent", "orchestrator", "plan.superseded", "plan", prev["id"], {"incident": ref, "by_run": run_id})
+    pid = f"PLAN-{state.next_id('plans'):04d}"
+    plan = {"id": pid, "incident_id": ref, "version": (prev or {}).get("version", 0) + 1, "status": "awaiting_approval", **plan_in, "created_by_run": run_id}
+    state.put("plans", pid, plan)
     st.update({"status": "awaiting_approval", "investigation": res, "plan_id": pid, "cause": res["cause"], "cause_confidence": res["cause_confidence"]})
     state.put("incident_state", ref, st)
     state.audit("agent", "orchestrator", "plan.proposed", "plan", pid, {"incident": ref, "requires_role": plan["requires_role"], "four_eyes": plan["four_eyes"]})
@@ -394,7 +430,8 @@ def decide(pid: str, body: DecisionIn) -> dict[str, Any]:
     req = plan["requires_role"]
     allowed = {req} if req == "qa_head" else {req, "operations_manager", "business_head"}
     if body.persona not in allowed:
-        raise HTTPException(403, f"This plan requires {ROLE_LABELS[req]}" + ("" if req == "qa_head" else " or Operations Manager / Business Head") + ".")
+        allowed_txt = " / ".join(ROLE_LABELS[r] for r in sorted(allowed))
+        raise HTTPException(403, f"Your role cannot decide this plan. Allowed: {allowed_txt}.")
     prior = [a for a in state.all_("approvals") if a["plan_id"] == pid and a["decision"] == "approved"]
     if body.decision == "approved" and plan["four_eyes"] and any(a["decided_by"].strip().lower() == body.decided_by.strip().lower() for a in prior):
         raise HTTPException(400, "Four-eyes rule: the second approval must come from a different person.")

@@ -5,5 +5,6 @@ __pycache__/
 *.pyc
 .env
 data/store/
+!data/snapshots/
 apps/web/tsconfig.tsbuildinfo
 tests/screens/*.tmp
