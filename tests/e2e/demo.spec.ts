@@ -59,8 +59,8 @@ test("hero loop: detect -> investigate -> plan -> approve -> advance -> outcome 
   await bar.getByRole("button", { name: "Approve" }).click();
   await expect(page.getByRole("status").first()).toBeVisible();
   await expect(page.getByRole("region", { name: "Plan decision" })).toHaveCount(0);
-  await expect(page.getByText("Tasks created")).toBeVisible();
-  const tasksCard = page.locator("section, div").filter({ has: page.getByText("Tasks created", { exact: true }) }).last();
+  await expect(page.getByRole("heading", { name: "Tasks created" })).toBeVisible();
+  const tasksCard = page.locator(".card").filter({ has: page.getByRole("heading", { name: "Tasks created" }) });
   await expect(tasksCard.getByRole("row").nth(1)).toBeVisible();
   await shot(page, "05-approved");
 

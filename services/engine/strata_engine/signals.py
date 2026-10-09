@@ -286,17 +286,16 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
     s = f.s[f.s["w"] >= 0]
     resp = np.full((A, WEEKS), np.nan)
     wk_med = np.full((A, WEEKS), np.nan)
-    for a_i, g in s.groupby("a"):
-        w = g["w"].to_numpy()
-        h = g["resp_h"].to_numpy()
-        for i in range(3, WEEKS):
-            sel = h[(w >= i - 3) & (w <= i)]
-            if len(sel):
-                resp[int(a_i), i] = np.median(sel)
-        for i in range(WEEKS):
-            sel = h[w == i]
-            if len(sel):
-                wk_med[int(a_i), i] = np.median(sel)
+    # vectorised: each ticket belongs to the 4-week windows ending at w, w+1, w+2, w+3
+    base_df = s[["a", "w", "resp_h"]]
+    g1 = base_df.groupby(["a", "w"])["resp_h"].median()
+    idx = g1.index.to_frame().to_numpy().astype(int)
+    wk_med[idx[:, 0], idx[:, 1]] = g1.to_numpy()
+    exp = pd.concat([base_df.assign(w=base_df["w"] + k) for k in range(4)], ignore_index=True)
+    exp = exp[(exp["w"] >= 3) & (exp["w"] < WEEKS)]
+    g4 = exp.groupby(["a", "w"])["resp_h"].median()
+    idx = g4.index.to_frame().to_numpy().astype(int)
+    resp[idx[:, 0], idx[:, 1]] = g4.to_numpy()
     x = resp[:, CUR]
     med, smad, z = robust(x, resp[:, base_slice], 0.0)
     z_prev_r = (resp[:, CUR - 1] - med) / smad

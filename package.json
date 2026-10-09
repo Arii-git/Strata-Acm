@@ -9,7 +9,7 @@
     "engine": "node scripts/py.mjs -m uvicorn strata_engine.app:app --app-dir services/engine --host 127.0.0.1 --port 8000",
     "web": "npm --prefix apps/web run dev",
     "dev": "node scripts/dev.mjs",
-    "check": "node scripts/lint-hex.mjs && node scripts/py.mjs -m ruff check services/engine data scripts --select E9,F && node scripts/py.mjs -m pytest -q tests/engine && npm --prefix apps/web exec tsc -- --noEmit",
+    "check": "node scripts/lint-hex.mjs && node scripts/lint-contrast.mjs && node scripts/lint-honesty.mjs && node scripts/py.mjs -m ruff check services/engine data scripts --select E9,F && node scripts/py.mjs -m pytest -q tests/engine && node apps/web/node_modules/typescript/bin/tsc -p apps/web --noEmit",
     "test": "node scripts/py.mjs -m pytest -q tests/engine",
     "snapshot": "node scripts/py.mjs scripts/snapshot.py",
     "engine:replay": "node scripts/py.mjs scripts/replay_engine.py",

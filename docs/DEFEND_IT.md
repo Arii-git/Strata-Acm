@@ -37,3 +37,11 @@
 **Notes (A10).** Role-addressed notes with `@role` mentions. Notes appear in the mentioned persona's Briefing and are audited.
 
 **Evaluation (A17).** Seed A (tuning) and seed B (hold-out, never tuned): precision, recall and root-cause accuracy per scenario, with misses shown. Seed B is the same generator with a different random draw, so it is not independent validation.
+
+**Persistence bonus.** If the account's own signals, re-scored on the window ending one week earlier against the same baseline, were already at incident level (≥ 50), the score gets +0.05, as the catalog specifies. SKU-scope signals are left out of that previous-run check, which is conservative.
+
+**Data Health Guard (A13) and the S13 Lab test.** If a feed is older than 3× its expected interval or is not "fresh", every signal from that source is paused portfolio-wide. If an account's latest order load has more than 5% duplicate rows, that account's order signals are paused. The Lab "stale + duplicated orders feed" button proves it: zero new incidents, and notices on the Sources page.
+
+**Replay mode (A20).** `npm run snapshot` records every engine view and every keyless investigation into `data/snapshots/replay.json`. `npm run engine:replay` serves only those responses, with no data store, keys or network, and refuses writes with a clear message. Use it as the stage fallback and say so.
+
+**Scale check.** `npm run scale` generates 2,400 accounts (10×), times the engine's evaluate(), measures p95 latency of `/risks`, and confirms the hero is still detected. It is a single-tenant measurement on one laptop, not a production benchmark.

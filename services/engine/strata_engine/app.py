@@ -219,10 +219,15 @@ def ranked(persona: str, kind: str | None = "risk") -> tuple[list[dict[str, Any]
 
 
 # ------------------------------------------------------------------ core
+def sim_clock() -> datetime:
+    """Simulated clock = data as-of time + days advanced in the Lab (data and detection stay as of SIM_NOW)."""
+    return SIM_NOW + timedelta(days=int((state.get("clock", "lab") or {}).get("offset_days", 0)))
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {"status": "ok", "mode": MODE, "store": STORE, "llm_provider": LLM_PROVIDER, "retrieval": "tfidf",
-            "sim_now": SIM_NOW.isoformat(), "features": FEATURES, "seed": SEED_NAME, "engine_version": ENGINE_VERSION}
+            "sim_now": sim_clock().isoformat(), "data_as_of": SIM_NOW.isoformat(), "features": FEATURES, "seed": SEED_NAME, "engine_version": ENGINE_VERSION}
 
 
 @app.get("/briefing")
@@ -777,6 +782,9 @@ def lab_advance(body: AdvanceIn) -> dict[str, Any]:
     """Fast-forward (A12): applies a SCRIPTED counterfactual to executing incidents (provenance illustrative),
     records outcomes and writes them back to memory (kind=outcome, authored_by=strata-system). Runs approved routines."""
     written, n = [], 0
+    offset = int((state.get("clock", "lab") or {}).get("offset_days", 0)) + body.days
+    state.put("clock", "lab", {"offset_days": offset})
+    new_now = SIM_NOW + timedelta(days=offset)
     for ref, inc in E().by_ref.items():
         st = inc_state(ref)
         if st.get("status") != "executing":
@@ -785,7 +793,7 @@ def lab_advance(body: AdvanceIn) -> dict[str, Any]:
             after = round(ev.delta * 0.25, 3)
             oid = f"O-{state.next_id('outcomes'):04d}"
             state.put("outcomes", oid, {"id": oid, "incident_id": ref, "ref": ref, "kpi": LABELS.get(ev.signal_key), "before_value": round(ev.delta, 3),
-                                        "after_value": after, "verdict": "improved", "provenance": "illustrative", "measured_at": (SIM_NOW + timedelta(days=body.days)).isoformat(),
+                                        "after_value": after, "verdict": "improved", "provenance": "illustrative", "measured_at": new_now.isoformat(),
                                         "notes": f"Scripted counterfactual after {body.days} simulated days: the planted effect is reduced by 75% in the Lab. Not a measured result."})
             n += 1
         mref = f"OUT-{ref}"
@@ -798,10 +806,11 @@ def lab_advance(body: AdvanceIn) -> dict[str, Any]:
         state.audit("system", "lab", "outcome.recorded", "incident", ref, {"days": body.days, "provenance": "illustrative"})
         state.audit("system", "memory", "memory.written", "memory", mref, {"authored_by": "strata-system"})
         written.append(mref)
-    runs = run_routines(body.days)
+    runs = run_routines(offset)
     E().memory = load_memory(state.all_("memory_added"))
     E().retr = Retriever(E().memory)
-    return {"sim_now": (SIM_NOW + timedelta(days=body.days)).isoformat(), "outcomes_recorded": n, "memory_written": written, "routine_outputs": runs}
+    state.audit("system", "lab", "clock.advanced", "clock", "lab", {"days": body.days, "sim_now": new_now.isoformat()})
+    return {"sim_now": new_now.isoformat(), "outcomes_recorded": n, "memory_written": written, "routine_outputs": runs}
 
 
 @app.post("/lab/reset")

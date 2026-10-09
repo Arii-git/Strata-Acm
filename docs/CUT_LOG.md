@@ -7,4 +7,4 @@
 | PostgresStore / pgvector, Redis, Docker | not needed for keyless FileStore | do not claim them; slide 11 should say "file store + sqlite in the prototype" |
 | SSE streaming of agent steps | time | plain JSON trace with timestamps; the UI reveals steps in sequence |
 | Lead time (weekly backtest), IsolationForest corroboration | time | stated on the Evaluation page as not computed |
-| Playwright e2e + screenshots, axe, Lighthouse | time | the engine loop e2e is covered by pytest (`tests/engine`) |
+| Lighthouse performance run | time | not measured; do not quote a score |

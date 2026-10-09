@@ -12,12 +12,19 @@ Extras: `npm run eval`, `npm run snapshot` then `npm run engine:replay` (offline
 
 ## What works
 - **Detect.** A synthetic nephrology-pharma estate: 240 fictional accounts, 104 weeks, ~140k order lines, plus tickets, complaints, CRM, warehouse and receivables. The signal engine (robust z with seasonality + common mode), noisy-OR scoring with the source-diversity cap, a persistence bonus, region, rep, batch, AE and opportunity rules, the Alert Budget and the Business Health Index (5 pillars, each decomposed).
-- **Hero #4821 is recovered from rows:** orders −31.3%, complaints +48.0%, response time +22.1%, touchpoints −39.5% (deck −31/+47/+22/−40, tolerance ±0.08). Critical, risk 98, 4 source systems, blast radius 6 accounts.
+- **Hero #4821 is recovered from rows:** orders −31.3%, complaints +48.0%, response time +22.1%, touchpoints −39.5% (deck −31/+47/+22/−40, tolerance ±0.08). Critical, risk 100 (incl. persistence bonus), 4 source systems, blast radius 6 accounts.
 - **Reason.** Investigator (fixed cause rules), Memory (TF-IDF; 0.5/0.3/0.2 breakdown shown), Orchestrator (SOP ∩ best past resolution). Evidence-or-Silence validator: every sentence is cited and carries no foreign numbers. The hero gives `supplier_delay`, top match **INC-017**, `grounding_ok = true`.
 - **Act.** Approve / Modify / Reject (a reason is required for the last two), role checks, QA four-eyes (two different names, qa_head only), simulated tasks and WhatsApp/email drafts, a hash-chained audit log with a verifier (tampering is detected and tested), Time-to-Action from wall-clock audit rows, Lab fast-forward → outcomes (illustrative) → memory write-back (`strata-system`), stale-plan supersession.
 - **Brief coverage.** Accounts with next-best-actions ER01–ER07 (A21), Standing Routines RT01–RT04 approved once and run on the sim clock (A22), role-addressed notes with @mentions in the Briefing (A10), Opportunity Radar (A11), persona views (A19).
 - **Assure.** Evaluation page with seed A and hold-out B and every miss shown; Audit Trail with CSV export; Data Health Guard with the S13 stale/duplicate feed Lab test; replay mode (read-only, offline).
 - **UI.** Landing, then a Briefing with a greeting, computed paragraph, 3 starters, Ask Strata cards with evidence chips and ≤ 7 priorities. Sidebar categorised by the loop (COMMAND → LAB), `g`-shortcuts, Ctrl K, every number/chart/table with a caption and a provenance badge, and the SYNTHETIC DATA chip. Colours live only in tokens.css (lint-enforced).
+
+## QA results (qa lane, Playwright + axe; `npm run e2e`, `npm run check`)
+- Smoke: 19/19 pages render with no console errors, a headline question, and the SYNTHETIC DATA chip; full-page screenshots in `tests/screens/`.
+- Demo e2e (Briefing → investigate → INC-017 → plan with simulated drafts → approve → tasks → Lab advance → illustrative outcome → audit verified): **passed 3 times consecutively** (9/9 with `--repeat-each=3`). Reject-without-reason is blocked; a QA-routed plan returns 403 for the Operations Manager.
+- axe (WCAG 2.0/2.1 A + AA): 0 critical and 0 serious on all /app pages (`tests/screens/axe-summary.json`).
+- Contrast lint: 14/14 token text pairs ≥ 4.5:1 (lowest 5.63:1). Honesty lint: no banned phrases; every Metric/ChartFrame has provenance.
+- Engine gate tests (pytest): 10/10.
 
 ## Honest evaluation (computed by `npm run eval`; nothing tuned on B)
 | Seed | Precision | Recall (planted) | Root-cause acc. | False alarms | Misses |
@@ -29,14 +36,15 @@ S02/S03 are not planted in this build (cut). Lead time is not computed (it needs
 Scale (`npm run scale`, 2,400 accounts, single-tenant laptop measurement): see `data/store/scale_latest.json`; the numbers are copied into the "Scale" line below once the run finishes.
 
 ## Deck deltas (details in DECK_DELTAS.md)
-Risk score 98 (deck 91); INC-017 similarity 0.60 (deck 0.89, so the slide must change); Health 82.0 (deck 84); 7 risks + 1 opportunity (deck "8 emerging risks"); 4 high/critical (deck 3); the slide 7 cause wording; slide 11 stack (no Postgres/pgvector/Redis/Docker/LangGraph in the prototype).
+Risk score 100 (deck 91); INC-017 similarity 0.60 (deck 0.89, so the slide must change); Health 82.0 (deck 84); 7 risks + 1 opportunity (deck "8 emerging risks"); 4 high/critical (deck 3); the slide 7 cause wording; slide 11 stack (no Postgres/pgvector/Redis/Docker/LangGraph in the prototype).
 
 ## Cut / not built (CUT_LOG.md)
 S02/S03 (A5 refill cadence, A6 expiry; see the contract conflict in OPEN_QUESTIONS Q13), PostgresStore/pgvector, Redis, SSE streaming, lead-time backtest, IsolationForest corroboration, the in-browser replay toggle, A8 page, A9, A15 CSV upload, Lighthouse.
 
 ## Known issues
 - Web API types are hand-written (pages declare some local types); generate them with openapi-typescript later.
-- The simulated clock does not move globally on fast-forward. Outcomes carry the advanced sim date, but the top-bar clock stays at 9 Oct.
+- Fast-forward moves the simulated clock shown in the top bar. Data and detection stay as of 9 Oct 09:00 (`data_as_of` in /health), because the Lab applies scripted outcomes, not new data.
+- Cosmetic: on the Outcomes chart, labels can overlap short bars; the Next.js dev badge covers the bottom sidebar item in dev mode only.
 - `customer_health` pillar Δ4w is n/a (point-in-time only).
 - Hero complaint and touchpoint counts are designed relative to the account's own baseline (OPEN_QUESTIONS Q6). Say so if asked.
 
@@ -62,7 +70,7 @@ See OWNERSHIP_LEDGER.md. Built: A1, A2, A3, A4, A7, A10, A11, A12-lite, A13, A14
 1. `/`: read the landing, click **Enter Strata**.
 2. Briefing: read the computed paragraph; click **Where are we quietly losing money?**; note the evidence chips.
 3. Business Health: index 82 with five pillars; service quality and field coverage are what's dragging it.
-4. Risk Register: Alert Budget banner; open **INC-2026-0001** (#4821, critical 98).
+4. Risk Register: Alert Budget banner; open **INC-2026-0001** (#4821, critical 100).
 5. Workbench → Evidence: the four deltas with sparklines and the SKU-CKD-01 stock cover; Blast Radius of 6.
 6. Agent trace → **Run investigation**: 4 steps, validator passed, narrative with chips; Memory tab: INC-017 breakdown.
 7. Plan tab: SOP-01 + INC-017 steps, WhatsApp and email drafts marked "Simulated — not sent". **Approve** (try Reject first: it needs a reason).
