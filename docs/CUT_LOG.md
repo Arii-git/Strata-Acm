@@ -6,5 +6,5 @@
 | Replay toggle in the UI (A20) | replay is selected at engine start (`npm run engine:replay`), not toggled in the browser | the mode chip in the top bar shows the mode |
 | PostgresStore / pgvector, Redis, Docker | not needed for keyless FileStore | do not claim them; slide 11 should say "file store + sqlite in the prototype" |
 | SSE streaming of agent steps | time | plain JSON trace with timestamps; the UI reveals steps in sequence |
-| Lead time (weekly backtest), IsolationForest corroboration | time | stated on the Evaluation page as not computed |
+| Lead time (weekly backtest) | the engine evaluates at one as-of date; a backtest needs re-running detection at earlier weeks | stated on the Evaluation page as not computed |
 | Lighthouse performance run | time | not measured; do not quote a score |

@@ -15,10 +15,24 @@ from strata_engine.detect import evaluate  # noqa: E402
 TITLES = {s["id"]: s["title"] for s in __import__("yaml").safe_load((ROOT / "contracts" / "scenarios.yaml").read_text(encoding="utf-8"))["scenarios"]}
 
 
+def isolation_flags(det, contamination: float = 0.05) -> set[int]:
+    """Secondary corroboration only (rules + statistics decide; ML corroborates): IsolationForest over each
+    account's signal z-scores. Returns the account ids in the most anomalous `contamination` share."""
+    from sklearn.ensemble import IsolationForest
+    keys = sorted({s.signal_key for sigs in det.acc_sigs.values() for s in sigs})
+    ids = sorted(det.acc_sigs)
+    X = np.array([[next((s.robust_z for s in det.acc_sigs[a] if s.signal_key == k), 0.0) for k in keys] for a in ids])
+    X = np.nan_to_num(np.clip(X, -10, 10))
+    model = IsolationForest(n_estimators=200, contamination=contamination, random_state=0).fit(X)
+    pred = model.predict(X)
+    return {a for a, p in zip(ids, pred) if p == -1}
+
+
 def run(seed_dir: Path, is_holdout: bool) -> dict:
     t = {p.stem: pd.read_pickle(p) for p in seed_dir.glob("*.pkl")}
     lab = json.loads((seed_dir / "eval_labels.json").read_text())
     det = evaluate(t)
+    if_flag = isolation_flags(det)
     matched: set[str] = set()
     per = []
     for L in lab["labels"]:
@@ -49,7 +63,8 @@ def run(seed_dir: Path, is_holdout: bool) -> dict:
                     "incidents": [h.ref for h in hits], "severity": hits[0].severity if hits else None,
                     "risk_score": hits[0].risk_score if hits else None, "cause": cause, "truth_cause": L.get("cause"),
                     "cause_ok": (cause == L.get("cause")) if (hits and L["kind"] != "decoy") else None, "hit": hit,
-                    "note": L.get("note", "")})
+                    "note": L.get("note", ""),
+                    "if_flagged": (any(int(k) in if_flag for k in L["keys"] if str(k).isdigit()) if L["scope"] in ("account", "batch", "rep") and L["keys"] else None)})
     risky = [i for i in det.incidents]
     real = [p for p in per if p["planted"] and p["kind"] != "decoy"]
     tp_inc = [i for i in risky if i.ref in matched and not any(p["kind"] == "decoy" and i.ref in p["incidents"] for p in per)]
@@ -63,7 +78,9 @@ def run(seed_dir: Path, is_holdout: bool) -> dict:
             "metrics": {"precision": round(precision, 3) if precision is not None else None, "recall": round(recall, 3),
                         "root_cause_acc": round(rca, 3) if rca is not None else None,
                         "incidents": len(risky), "false_alarms": len(fa) + len(decoy_fa), "false_alarm_refs": fa + decoy_fa,
-                        "scenarios_planted": len(real), "scenarios_detected": sum(1 for p in real if p["detected"])},
+                        "scenarios_planted": len(real), "scenarios_detected": sum(1 for p in real if p["detected"]),
+                        "if_corroborated": sum(1 for p in real if p.get("if_flagged")),
+                        "if_checked": sum(1 for p in real if p.get("if_flagged") is not None)},
             "per_scenario": per,
             "hero": next(({"orders_delta": s.delta, "key": s.signal_key} for s in det.acc_sigs.get(4821, []) if s.signal_key == "order_volume_delta"), None),
             "hero_deltas": {s.signal_key: round(float(s.delta), 3) for s in det.acc_sigs.get(4821, []) if s.delta is not None and s.signal_key in
@@ -75,7 +92,8 @@ if __name__ == "__main__":
     runs = [run(store / "seed_dev", False), run(store / "seed_holdout", True)]
     out = {"runs": runs, "caveat": "Seed B (hold-out) uses the same generator and scenarios with a different random draw. It guards against "
            "over-fitting to one sample; it is NOT independent validation. Real validation needs Altygen data.",
-           "lead_time": "Not computed in this build (needs a weekly backtest); listed as a known gap."}
+           "lead_time": "Not computed in this build (needs a weekly backtest); listed as a known gap.",
+           "isolation_forest": "Secondary corroboration only: IsolationForest (200 trees, 5% contamination, random_state 0) over each account's signal z-scores. if_flagged = the unsupervised model also ranked a planted account among the most anomalous 5%. It never decides detection."}
     (store / "eval_latest.json").write_text(json.dumps(out, indent=2, default=lambda o: float(o) if isinstance(o, np.floating) else str(o)))
     for r in runs:
         print("holdout" if r["is_holdout"] else "seed A ", r["metrics"], r["hero_deltas"])

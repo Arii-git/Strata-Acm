@@ -45,3 +45,5 @@
 **Replay mode (A20).** `npm run snapshot` records every engine view and every keyless investigation into `data/snapshots/replay.json`. `npm run engine:replay` serves only those responses, with no data store, keys or network, and refuses writes with a clear message. Use it as the stage fallback and say so.
 
 **Scale check.** `npm run scale` generates 2,400 accounts (10×), times the engine's evaluate(), measures p95 latency of `/risks`, and confirms the hero is still detected. It is a single-tenant measurement on one laptop, not a production benchmark.
+
+**IsolationForest corroboration.** `npm run eval` also fits an IsolationForest (200 trees, 5% contamination, random_state 0) over every account's signal z-scores and reports whether the planted accounts fall in the most anomalous 5%. On both seeds it agrees on 3 of 7 checkable scenarios (S01, S06, S07) and also flags the S12 decoy, which is why it only corroborates and never decides. Rules plus statistics decide.
