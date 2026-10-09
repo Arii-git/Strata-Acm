@@ -201,10 +201,11 @@ def test_notify_respects_roles_and_prefs(client):
 def test_demo_accounts(client, monkeypatch):
     r = client.get("/auth/demo-accounts")
     items = r.json()
-    assert len(items) == 6
-    assert {i["role"] for i in items} == {"operations_manager", "account_manager", "sales_manager", "support_manager",
-                                          "business_head", "qa_head"}
-    assert all(i["email"].endswith("@demo.strata.local") and i["demo_password"] == DEMO_PW for i in items)
+    roles = {"operations_manager", "account_manager", "sales_manager", "support_manager", "business_head", "qa_head"}
+    assert len(items) == 18  # three fictional companies x six roles
+    assert {i["role"] for i in items} == roles
+    assert len({i["company_name"] for i in items}) == 3
+    assert all(i["email"].endswith("demo.strata.local") and i["demo_password"] == DEMO_PW for i in items)
     monkeypatch.setenv("STRATA_DEMO_LOGINS", "0")
     assert all("demo_password" not in i for i in client.get("/auth/demo-accounts").json())
     # every demo account can sign in with the shared test password

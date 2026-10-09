@@ -15,8 +15,8 @@ def client():
 
 @pytest.fixture(autouse=True)
 def keyless(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ASSISTANT_MODEL", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
     from strata_engine import assistant
     assistant.BUDGET.reset()
 
@@ -34,11 +34,11 @@ def test_status_keyless(client):
 
 
 def test_status_keyed_reports_model(client, monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-not-real")
+    assert client.get("/assistant/status").json()["configured"] is False  # a key without a model is not enough
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test-model")
     s = client.get("/assistant/status").json()
-    assert s["configured"] is True and s["provider"] == "anthropic" and s["model"] == "claude-opus-5-5"
-    monkeypatch.setenv("ASSISTANT_MODEL", "claude-sonnet-5-5")
-    assert client.get("/assistant/status").json()["model"] == "claude-sonnet-5-5"
+    assert s == {"configured": True, "provider": "gemini", "model": "gemini-test-model"}
 
 
 def test_top_problems_cited(client):
@@ -131,86 +131,86 @@ def test_strip_unknown_citations():
     assert "INC-2026-0001" in out and "INC-2099-9999" not in out and "[see below]" in out
 
 
-# ------------------------------------------------------------------ keyed path with a mocked Anthropic client
-def _block(**kw):
-    return SimpleNamespace(**kw)
+# ------------------------------------------------------------------ keyed path with a mocked Gemini client
+def _text(text, finish="STOP"):
+    from google.genai import types
+    return types.GenerateContentResponse(candidates=[types.Candidate(
+        content=types.Content(role="model", parts=[types.Part.from_text(text=text)]), finish_reason=finish)])
 
 
-class FakeMessages:
+def _call(name, args=None):
+    from google.genai import types
+    return types.GenerateContentResponse(candidates=[types.Candidate(
+        content=types.Content(role="model", parts=[types.Part.from_function_call(name=name, args=args or {})]), finish_reason="STOP")])
+
+
+class FakeModels:
     def __init__(self, script):
         self.script = list(script)
         self.calls = []
 
-    def create(self, **kw):
-        self.calls.append(kw)
-        return self.script.pop(0)
+    def generate_content(self, **kw):
+        self.calls.append({**kw, "contents": list(kw["contents"])})
+        item = self.script.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
 
 
 def _fake_client(monkeypatch, script):
     from strata_engine import assistant
-    msgs = FakeMessages(script)
-    fake = SimpleNamespace(beta=SimpleNamespace(messages=msgs))
-    monkeypatch.setattr(assistant, "_client", lambda: fake)
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
-    return msgs
+    models = FakeModels(script)
+    monkeypatch.setattr(assistant, "_client", lambda: SimpleNamespace(models=models))
+    monkeypatch.setenv("GEMINI_API_KEY", "test-not-real")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test-model")
+    return models
 
 
 def test_keyed_tool_loop_and_citations(client, monkeypatch):
     from strata_engine.app import ranked
     top = ranked("operations_manager", "risk")[0][0]
-    script = [
-        SimpleNamespace(stop_reason="tool_use", content=[_block(type="tool_use", id="tu1", name="list_problems", input={"limit": 3})]),
-        SimpleNamespace(stop_reason="end_turn", content=[_block(type="text", text=(
-            f"**{top['title']}** is first, risk {top['risk_score']} [{top['ref']}].\n"
-            "It will cost 99,999,999 INR next quarter [INC-2099-0001]."))]),
-    ]
-    msgs = _fake_client(monkeypatch, script)
+    models = _fake_client(monkeypatch, [
+        _call("list_problems", {"limit": 3}),
+        _text(f"**{top['title']}** is first, risk {top['risk_score']} [{top['ref']}].\n"
+              "It will cost 99,999,999 INR next quarter [INC-2099-0001]."),
+    ])
     out = ask(client, "What should I look at first?")
-    assert out["provider"] == "anthropic"
+    assert out["provider"] == "gemini"
     assert top["ref"] in {c["id"] for c in out["citations"]}
     assert "99,999,999" not in out["reply"] and "INC-2099-0001" not in out["reply"]
-    assert len(msgs.calls) == 2
-    first = msgs.calls[0]
-    assert first["model"] == "claude-opus-5-5" and first["output_config"] == {"effort": "low"}
-    assert first["fallbacks"] == "default" and "server-side-fallback-2026-07-01" in first["betas"]
-    assert {t["name"] for t in first["tools"]} >= {"get_briefing", "list_problems", "get_case", "search_memory", "get_account", "get_business_health"}
-    # tool result went back as a user turn with the matching id
-    tr = msgs.calls[1]["messages"][-1]["content"][0]
-    assert tr["type"] == "tool_result" and tr["tool_use_id"] == "tu1" and top["ref"] in tr["content"]
+    assert len(models.calls) == 2
+    first = models.calls[0]
+    assert first["model"] == "gemini-test-model"
+    names = {d.name for d in first["config"].tools[0].function_declarations}
+    assert names >= {"get_briefing", "list_problems", "get_case", "search_memory", "get_account", "get_business_health"}
+    # the tool result went back as a function response carrying the ranked case
+    fr = models.calls[1]["contents"][-1].parts[0].function_response
+    assert fr.name == "list_problems" and top["ref"] in str(fr.response)
 
 
 def test_keyed_api_error_falls_back(client, monkeypatch):
-    import anthropic
-    from strata_engine import assistant
-
-    class Boom:
-        def create(self, **kw):
-            raise anthropic.APIConnectionError(request=None)  # type: ignore[arg-type]
-
-    monkeypatch.setattr(assistant, "_client", lambda: SimpleNamespace(beta=SimpleNamespace(messages=Boom())))
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    _fake_client(monkeypatch, [ConnectionError("network down test-not-real")])
     out = ask(client, "What needs me today?")
-    assert out["provider"] == "none" and out["notice"] and "sk-test" not in str(out)
+    assert out["provider"] == "none" and out["notice"] and "test-not-real" not in str(out)
     assert out["citations"]
 
 
 def test_keyed_round_cap_falls_back(client, monkeypatch):
-    loop = [SimpleNamespace(stop_reason="tool_use", content=[_block(type="tool_use", id=f"t{i}", name="get_briefing", input={})]) for i in range(10)]
-    msgs = _fake_client(monkeypatch, loop)
+    models = _fake_client(monkeypatch, [_call("get_briefing") for _ in range(10)])
     out = ask(client, "What needs me today?")
     from strata_engine.assistant import MAX_ROUNDS
-    assert len(msgs.calls) == MAX_ROUNDS and out["provider"] == "none"
+    assert len(models.calls) == MAX_ROUNDS and out["provider"] == "none"
 
 
 def test_keyed_hourly_budget(client, monkeypatch):
     monkeypatch.setenv("LLM_MAX_CALLS_PER_HOUR", "0")
-    msgs = _fake_client(monkeypatch, [])
+    models = _fake_client(monkeypatch, [])
     out = ask(client, "What needs me today?")
-    assert out["provider"] == "none" and msgs.calls == []
+    assert out["provider"] == "none" and models.calls == []
 
 
 def test_keyed_refusal_falls_back(client, monkeypatch):
-    _fake_client(monkeypatch, [SimpleNamespace(stop_reason="refusal", content=[])])
+    _fake_client(monkeypatch, [_text("", finish="SAFETY")])
     out = ask(client, "What needs me today?")
     assert out["provider"] == "none"
 

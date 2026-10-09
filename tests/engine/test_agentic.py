@@ -112,7 +112,8 @@ def test_policy_put_with_bearer_token(client):
     if not cfg_path.exists():
         pytest.skip("auth lane not present")
     cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
-    users = {u["role"]: u["email"] for u in cfg["demo_users"]["users"]}
+    default_co = cfg["demo_users"]["company"]
+    users = {u["role"]: u["email"] for u in cfg["demo_users"]["users"] if u.get("company", default_co) == default_co}
     def token(role):
         r = client.post("/auth/login", json={"email": users[role], "password": cfg["demo_password"]})
         if r.status_code != 200:

@@ -1,8 +1,8 @@
 """Ask STRATA: the operations copilot behind the assistant dock (night build, assistant lane).
 
 Two paths, same tools, same citations:
-- GEMINI_API_KEY and GEMINI_MODEL set -> Gemini receives a compact evidence packet built by WHITELISTED read-only
-  functions that call the engine's own handler functions (never SQL, never writes).
+- GEMINI_API_KEY and GEMINI_MODEL set -> Gemini (google-genai SDK) answers with function calling over WHITELISTED
+  read-only tools that call the engine's own handler functions (never SQL, never writes).
 - Keyless (provider "none") -> a deterministic intent router that composes short templated answers from the same
   functions. This is also the fallback for any API error, timeout, refusal or hourly-budget hit.
 
@@ -36,7 +36,7 @@ log = logging.getLogger("strata.assistant")
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
 # The model is deliberately an environment setting. This prototype must never silently change a provider/model.
-MAX_TOKENS = 512
+MAX_TOKENS = 2048  # includes the model's (low) thinking tokens; the prompt asks for 2-6 short lines
 API_TIMEOUT_S = 45.0
 MAX_HISTORY = 12
 MAX_CHARS = 4000
@@ -56,7 +56,7 @@ def _model() -> str | None:
 
 def _sdk_available() -> bool:
     try:
-        importlib.import_module("google.generativeai")
+        importlib.import_module("google.genai")
         return True
     except ImportError:
         return False
@@ -651,7 +651,7 @@ def keyless_answer(question: str, persona: str, page: str | None, reg: Registry)
 
 
 # ------------------------------------------------------------------ Gemini path
-SYSTEM_TMPL = """You are STRATA, the operations copilot inside a B2B operations console (synthetic demo data for a fictional pharma distributor).
+SYSTEM_TMPL = """You are STRATA, the operations copilot inside a B2B operations console (demo data for a fictional company).
 The signed-in user is the {role}. They are on page {page}. Data is as of {as_of}.
 
 How to answer:
@@ -669,72 +669,76 @@ class LLMUnavailable(Exception):
     """Any reason to fall back to the keyless path. The message is safe to log (never contains the key)."""
 
 
-
-def _evidence_packet(question: str, persona: str, reg: Registry) -> dict[str, Any]:
-    """Build the only data Gemini can see for a turn from typed, read-only functions."""
-    packet: dict[str, Any] = {
-        "briefing": t_get_briefing(reg, persona),
-        "ranked_items": t_list_problems(reg, persona, limit=5, kind="all"),
-        "business_health": t_get_business_health(reg, persona),
-    }
-    ref = _case_ref(question)
-    if ref:
-        packet["case"] = t_get_case(reg, persona, ref)
-    account = re.search(r"\b(?:account|acc-?)\s*#?(\d{3,6})\b", question, re.IGNORECASE)
-    if account:
-        packet["account"] = t_get_account(reg, persona, int(account.group(1)))
-    return _clean(packet)
+MAX_ROUNDS = 4  # model turns per question (tool calls included); beyond this we fall back to the templates
+_REFUSALS = {"SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "RECITATION"}
 
 
-def _keep_cited_sentences(reply: str, reg: Registry) -> str:
-    """Evidence-or-Silence for the Gemini path: uncited claims are not displayed."""
-    kept: list[str] = []
-    for raw in reply.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        parts = re.split(r"(?<=[.!?])\s+", line)
-        cited = [part for part in parts if any(re.search(rf"(?<![\w-]){re.escape(cid)}(?![\w-])", part) for cid in reg.ids)]
-        if cited:
-            kept.append(" ".join(cited))
-    return "\n".join(kept).strip()
+def _client() -> Any:
+    from google import genai
+    from google.genai import types
+    return genai.Client(api_key=_key(), http_options=types.HttpOptions(timeout=int(API_TIMEOUT_S * 1000)))
+
+
+def _contents(messages: list[dict[str, str]]) -> list[Any]:
+    from google.genai import types
+    return [types.Content(role="user" if m["role"] == "user" else "model", parts=[types.Part.from_text(text=m["content"])])
+            for m in messages]
 
 
 def llm_answer(messages: list[dict[str, str]], persona: str, page: str | None, reg: Registry) -> str:
-    """Ask Gemini for a short interpretation of a pre-built evidence packet, or fail closed."""
-    if not BUDGET.take():
-        raise LLMUnavailable("hourly LLM call budget reached")
-    key, model_name = _key(), _model()
-    if not key or not model_name:
-        raise LLMUnavailable("Gemini is not configured")
-    question = messages[-1]["content"] if messages else ""
-    packet = _evidence_packet(question, persona, reg)
+    """Gemini with function calling over the whitelisted read-only TOOLS, or fail closed (LLMUnavailable)."""
+    from google.genai import types
+
     from .app import sim_clock
     system = SYSTEM_TMPL.format(role=ROLE_LABELS.get(persona, persona), page=page or "unknown", as_of=sim_clock().date().isoformat())
-    prompt = (
-        "Answer the question using only the JSON evidence below. Every sentence must cite at least one existing "
-        "ID in square brackets. If the evidence does not answer it, say 'I don't know from the data.' with no other "
-        "claim. Do not use Markdown headings or tables.\n\n"
-        f"Question: {question}\n\nEvidence JSON:\n{_dumps(packet)}"
+    decls = [types.FunctionDeclaration(name=n, description=TOOLS[n]["description"], parameters_json_schema=TOOLS[n]["schema"])
+             for n in available_tools()]
+    config = types.GenerateContentConfig(
+        system_instruction=system, temperature=0.1, max_output_tokens=MAX_TOKENS,
+        thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.LOW, include_thoughts=False),
+        tools=[types.Tool(function_declarations=decls)],
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=key)
-        client = genai.GenerativeModel(model_name=model_name, system_instruction=system)
-        response = client.generate_content(prompt, generation_config={"temperature": 0.1, "max_output_tokens": MAX_TOKENS})
-        text = str(response.text or "").strip()
-    except Exception as exc:  # Provider errors must not leak keys or bypass the deterministic fallback.
-        raise LLMUnavailable(type(exc).__name__) from None
-    if not text:
-        raise LLMUnavailable("empty reply")
-    text = strip_unknown_citations(text, reg)
-    text = _keep_cited_sentences(text, reg)
-    text, dropped = guard_numbers(text, [_dumps(packet)])
-    if dropped:
-        log.info("assistant: dropped %d unsupported Gemini sentence(s)", dropped)
-    if not text:
-        raise LLMUnavailable("reply had no cited, supported sentences")
-    return text
+    client = _client()
+    contents = _contents(messages)
+    sources = [system, *(m["content"] for m in messages if m["role"] == "user")]
+    for _ in range(MAX_ROUNDS):
+        if not BUDGET.take():
+            raise LLMUnavailable("hourly LLM call budget reached")
+        try:
+            resp = client.models.generate_content(model=_model(), contents=contents, config=config)
+        except Exception as exc:  # provider errors must not leak keys or bypass the deterministic fallback
+            code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+            raise LLMUnavailable(f"{type(exc).__name__}{f' {code}' if code else ''}") from None
+        cand = (resp.candidates or [None])[0]
+        reason = getattr(getattr(cand, "finish_reason", None), "name", None)
+        if reason in _REFUSALS or getattr(getattr(resp, "prompt_feedback", None), "block_reason", None):
+            raise LLMUnavailable(f"refused ({reason or 'blocked'})")
+        if cand is None or cand.content is None:
+            raise LLMUnavailable("empty reply")
+        calls = [p.function_call for p in (cand.content.parts or []) if getattr(p, "function_call", None)]
+        if calls:
+            contents.append(cand.content)
+            parts = []
+            for fc in calls:
+                result = run_tool(fc.name, dict(fc.args or {}), reg, persona)
+                sources.append(_dumps(result))
+                parts.append(types.Part.from_function_response(name=fc.name, response={"result": result}))
+            contents.append(types.Content(role="user", parts=parts))
+            continue
+        if reason == "MAX_TOKENS":
+            raise LLMUnavailable("reply was cut off")
+        text = "".join(p.text for p in (cand.content.parts or []) if getattr(p, "text", None) and not getattr(p, "thought", False)).strip()
+        if not text:
+            raise LLMUnavailable("empty reply")
+        text = strip_unknown_citations(text, reg)
+        text, dropped = guard_numbers(text, sources)
+        if dropped:
+            log.info("assistant: dropped %d unsupported sentence(s)", dropped)
+        if not text.strip():
+            raise LLMUnavailable("reply had no supported sentences")
+        return text
+    raise LLMUnavailable("tool-call round cap reached")
 
 
 # ------------------------------------------------------------------ API

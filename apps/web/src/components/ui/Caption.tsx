@@ -8,7 +8,7 @@ const PROV_TITLE: Record<Provenance, string> = {
 };
 
 export function ProvenanceBadge({ provenance }: { provenance: Provenance }) {
-  return <span className={`prov prov--${provenance}`} title={PROV_TITLE[provenance]}>{provenance}</span>;
+  return <span className={`prov prov--${provenance}`} title={PROV_TITLE[provenance]} aria-label={`Provenance: ${provenance}`}>{provenance}</span>;
 }
 
 /** Caption (--fs-12 = 14px in tokens v2, --ink-3) explanation: what this is, then what it implies. */
