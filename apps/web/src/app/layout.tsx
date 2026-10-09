@@ -3,6 +3,12 @@ import { Poppins, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "@/styles/tokens.css";
 import "@/styles/tokens-v2.css";
 import "@/styles/globals.css";
+import "@/styles/lanes/home.css";
+import "@/styles/lanes/problems.css";
+import "@/styles/lanes/case.css";
+import "@/styles/lanes/pages.css";
+import "@/styles/lanes/help.css";
+import "@/styles/lanes/a11y.css";
 
 const poppins = Poppins({ variable: "--nf-poppins", subsets: ["latin"], weight: ["500", "600"], display: "swap" });
 const plexSans = IBM_Plex_Sans({ variable: "--nf-plex-sans", subsets: ["latin"], weight: ["400", "500", "600"], display: "swap" });
