@@ -4,6 +4,8 @@ This is local prototype access data only. All companies, names, user IDs, email 
 
 Shared local-demo password: `Strata-Demo-2026`
 
+Each company has its own generated data (240 accounts, about 135k orders, 40k support tickets, 14k complaints over two years) in its own industry wording, plus its own cases, approvals and audit trail. Signing in decides which company you see. Regenerate with `npm run seed`.
+
 ## Company 1 — Renalis Pharma Distribution (fictional)
 
 - Company ID: `co_renalis`

@@ -40,7 +40,7 @@ copy .env.example .env
 | Want | Put in `.env` |
 |---|---|
 | Real email (OTP, password reset, alerts) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (Gmail: an app password). Without them mail goes to the in-app outbox and the engine log. |
-| Assistant on Claude | `ANTHROPIC_API_KEY`, optional `ASSISTANT_MODEL`. Without a key the assistant runs in keyless mode. |
+| Assistant on Gemini | `GEMINI_API_KEY` and `GEMINI_MODEL` (e.g. `gemini-3.5-flash-lite`). Both are needed; without them the assistant answers from cited templates. |
 | Auth / admin | `STRATA_AUTH_SECRET` (token signing), `STRATA_ADMIN_KEY` (for `POST /admin/companies`) |
 | Links in emails | `APP_URL` (default `http://localhost:3000`) |
 | Engine options | `STRATA_MODE`, `STRATA_SEED`, `STRATA_FEATURES`, `SIM_NOW`, ... |
@@ -48,7 +48,7 @@ copy .env.example .env
 
 The variable names for SMTP and the assistant are owned by the engine modules (`mailer.py`,
 `assistant.py`); any name you put in `.env` reaches the engine. Secrets can also come from your
-shell for the named keys above, e.g. `$env:ANTHROPIC_API_KEY="..."; docker compose up`.
+shell for the named keys above, e.g. `$env:GEMINI_API_KEY="..."; docker compose up`.
 
 Never commit `.env`. Docker never prints its values; `docker compose config` does, so do not paste that output.
 
@@ -63,8 +63,9 @@ From the repo root:
 docker compose up --build
 ```
 
-- First run builds both images (about 3-6 minutes) and then the engine **generates the synthetic data**
-  (seed A + hold-out + eval report, about 1-2 minutes). Log line: `[strata] first boot: generating synthetic data`.
+- First run builds both images (about 3-6 minutes) and then the engine **generates the demo data**
+  (seed A + hold-out + one estate per extra demo company + eval report, about 2-3 minutes).
+  Log line: `[strata] first boot: generating data`.
 - `web` waits until the engine is healthy, then starts. Open http://localhost:3000.
 - Later runs reuse the data: `docker compose up` (add `-d` to run in the background; `docker compose logs -f` to watch).
 
@@ -79,7 +80,7 @@ Stop: `Ctrl+C`, or `docker compose down` if you used `-d`. Data is kept.
 | Rebuild after code changes | `docker compose up --build` |
 
 The data lives in the named volume `strata_strata-store`, mounted at `/app/data/store` in the engine
-(`seed_dev/`, `seed_holdout/`, `eval_latest.json`, `state.db`). It is separate from your local
+(`seed_dev/`, `seed_holdout/`, `seed_brightcart/`, `seed_meridian/`, `eval_latest.json`, `state.db` plus one `state_<company>.db` per extra company). It is separate from your local
 `data/store/` folder; the two never mix.
 
 ## 5. Troubleshooting
@@ -99,7 +100,7 @@ The data lives in the named volume `strata_strata-store`, mounted at `/app/data/
 ## How it is put together
 
 - `services/engine/Dockerfile`: `python:3.12-slim`, runtime deps from `services/engine/requirements.txt`
-  (pytest/ruff skipped), the repo layout mirrored under `/app` (`contracts/`, `config/`, `data/generator.py`,
+  (pytest/ruff skipped), the repo layout mirrored under `/app` (`contracts/`, `config/`, `data/generator.py`, `data/profiles.py`,
   `data/memory_seed/`, `data/snapshots/`, `docs/`, `scripts/`, `services/engine/`). The entrypoint seeds once
   if `/app/data/store/seed_dev/orders.pkl` or `seed_holdout/manifest.json` is missing, then runs
   `uvicorn strata_engine.app:app` on `0.0.0.0:8000` with a single worker. Runs as uid 10001. Healthcheck: `GET /health`.
@@ -110,6 +111,20 @@ The data lives in the named volume `strata_strata-store`, mounted at `/app/data/
   into `.next/routes-manifest.json` at build time and the standalone server reads them from there. The runtime
   `ENGINE_URL` env is also set for any future server-side code, but it does not move the rewrite.
 - `config/` is only needed at build time; its TypeScript is compiled into the web bundle.
+
+## 6. Deploying online (after the review)
+
+The stack needs about **1.5 GB RAM** at runtime (pandas + four data estates in the engine) and a few minutes to
+seed on first boot. Pick by what you need:
+
+| Need | Use | Steps |
+|---|---|---|
+| A link for judges **today**, least effort | **GitHub Codespaces** (free hours on personal accounts) | Push the repo → Code → Codespaces → *Create codespace*. In its terminal: `cp .env.example .env`, add keys, `docker compose up --build`. In the **Ports** tab set port 3000 to *Public* and share that URL. It stops when the codespace sleeps. |
+| A stable URL that survives restarts | **One small VM** (any cloud; 2 vCPU / 4 GB) | Install Docker, `git clone`, create `.env`, `docker compose up -d --build`. Put Caddy in front for HTTPS (`caddy reverse-proxy --from your.domain --to localhost:3000`). Only port 443 open; never expose 8000. |
+| Managed containers | Render / Railway / Fly.io | Two services from the two Dockerfiles. The web image must be **built** with `--build-arg ENGINE_URL=<engine's private URL incl. port>` (a runtime env var does not move Next.js rewrites). Choose an instance with ≥1 GB RAM for the engine and a persistent disk at `/app/data/store`; free tiers usually sleep or run out of memory. |
+
+Before any public deployment: set `STRATA_DEMO_LOGINS=0`, a long random `STRATA_AUTH_SECRET`, change or remove
+the shared demo password, and keep keys only in the platform's secret store (never in the repo or an image).
 
 ## npm shortcuts
 

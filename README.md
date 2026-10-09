@@ -18,14 +18,15 @@ the only outbound traffic is login/alert email (when SMTP is configured) and Gem
 | Email login, OTP, password reset, alert emails | Built | Works keyless (codes shown on screen); real mail needs a Gmail **app password** |
 | Company join codes (Google-Classroom style, fixed 6 chars) | Built | Codes are assigned by us and never regenerated |
 | Sidebar accordion, loop loader, dark mode, page transitions | Built | |
-| Simulation Lab (industries × issue categories, months-long playback) | Built | Outcomes are illustrative, not measured |
+| Simulation Lab: 46 scenarios, 6 industries, 13 issue types, week-by-week playback | Built | Outcomes are illustrative, not measured |
 | Agentic risk levels 1–5, deadlines, auto-decisions | Built | See [Where agentic AI is used](#where-agentic-ai-is-used) |
-| Gemini assistant (floating button on every console page) | Built | Needs `GEMINI_API_KEY` + `GEMINI_MODEL`; falls back to cited templates |
+| Gemini assistant (floating button on every console page) | Built, verified live | Needs `GEMINI_API_KEY` + `GEMINI_MODEL`; falls back to cited templates |
+| Own data per company (pharma / FMCG / logistics) | Built | Each company: 240 accounts, ~135k orders, ~40k tickets, own cases and approvals |
 | Docker | Built, not re-verified | `docker compose up --build` |
 | Supabase, Google SSO, `@strata.si` sender domain | **Not started** | Phase 2 (needs a bought domain + DNS) |
 
-**Not yet verified after the last editing session.** Everything after commit `a73eaaf` (Version-2) is uncommitted
-and has not been type-checked or tested. Run `npm run check` and `npm run e2e` before the demo.
+Verified on branch `rebuild` (2026-10-10): `npm run check` passes (234 engine tests, typecheck, lints). Playwright
+e2e has not been re-run after the Simulation Lab and multi-company changes; run `npm run e2e` before the demo.
 
 ---
 
@@ -49,7 +50,9 @@ a 6-digit emailed code.
 
 ## Sample companies and users
 
-Three fictional companies, six users each (one per role). **Password for every demo account: `Strata-Demo-2026`.**
+Three fictional companies, six users each (one per role). Each company has **its own generated data estate** in its
+industry (accounts, products, regions, cases, approvals), so signing in as BrightCart shows only BrightCart.
+**Password for every demo account: `Strata-Demo-2026`.**
 These accounts use the non-routable `demo.strata.local` domain, so no real mail is ever sent to them.
 Full reference: [docs/SAMPLE_ACCESS.md](docs/SAMPLE_ACCESS.md). Source of truth: [config/demo_companies.yaml](config/demo_companies.yaml).
 
@@ -86,7 +89,7 @@ Open `http://localhost:3000`.
 
 | Command | What it does |
 | --- | --- |
-| `npm run seed` | Generate and load the synthetic dataset |
+| `npm run seed` | Generate every data estate (seed A, hold-out, BrightCart, Meridian) |
 | `npm run snapshot` | Write the replay JSON (offline demo mode) |
 | `npm run eval` | Evaluate on seed A and hold-out seed B |
 | `npm run check` | Lint, typecheck, unit, schema and honesty checks |
@@ -111,12 +114,14 @@ Without SMTP, mail goes to an in-app outbox and sign-up codes are shown on scree
 
 ```dotenv
 GEMINI_API_KEY=your_key
-GEMINI_MODEL=your_selected_model
+GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
-The **Ask STRATA** button floats bottom-right on every console page. Gemini only sees a compact evidence packet built
-by STRATA's typed, read-only query functions. Any sentence without a valid evidence ID, or with a number it was not
-given, is dropped and replaced by the deterministic cited answer. Check `GET /assistant/status` to confirm the key loaded.
+The **Ask STRATA** button floats bottom-right on every console page. Gemini (google-genai SDK) answers by calling
+STRATA's whitelisted, read-only tools (briefing, cases, accounts, memory, health, risk levels, simulations) for the
+signed-in user's company. Citations are built only from IDs those tools returned; a sentence with a number the tools
+did not return is dropped. Any error, refusal or budget limit falls back to the deterministic cited answer.
+`npm run dev` loads `.env` for the engine; check `GET /assistant/status` to confirm the key loaded.
 
 ---
 
@@ -159,11 +164,12 @@ Deployment is a post-review step. Never commit keys; set them in the host's dash
 | Option | Best for | Cost | Notes |
 | --- | --- | --- | --- |
 | **GitHub Codespaces** | Live demo from a browser | Free monthly hours | Push to GitHub → Code → Codespaces → `docker compose up --build`; forward port 3000 |
-| **Render** | A permanent judge link | Free tier available | Two Docker web services (engine, web). Free tier sleeps when idle and has no persistent disk |
+| **Render** | Managed containers | Paid instance for the engine | Two Docker services; build the web image with `ENGINE_URL` as a build arg |
 | **Railway / Fly.io** | Permanent link, faster cold start | Small paid credit | Both run the existing Dockerfiles directly |
-| **Vercel (web) + Render (engine)** | Fastest web front end | Free tiers | Set `ENGINE_URL` on Vercel to the engine's public URL |
+| **One small VM + Docker** | The most reliable permanent link | ~2 vCPU / 4 GB | `docker compose up -d --build`, Caddy in front for HTTPS |
 
-Step by step: [docs/DOCKER.md](docs/DOCKER.md) (local Docker) and [STRATA_DOCKER_WEB_DEPLOY.md](STRATA_DOCKER_WEB_DEPLOY.md) (Codespaces / Render).
+The engine needs about 1.5 GB RAM; most free tiers sleep or run out of memory. The web image bakes `ENGINE_URL` in at
+**build** time. Step by step: [docs/DOCKER.md](docs/DOCKER.md) sections 3 and 6.
 Before going public: set `STRATA_DEMO_LOGINS=0`, set `STRATA_AUTH_SECRET`, and use a fresh app password.
 
 ---
@@ -187,7 +193,7 @@ Mapping steps and cautions: [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
 
 - `apps/web/` — Next.js console and the landing/onboarding flow.
 - `services/engine/strata_engine/` — FastAPI engine: detection, agents, auth, mailer, digest, simulation, assistant.
-- `data/` — deterministic synthetic-data generator and seeded memory.
+- `data/` — deterministic data generator, industry profiles (`profiles.py`) and seeded memory.
 - `config/demo_companies.yaml` — fictional companies, join codes and demo users.
 - `contracts/` — frozen database, signal, engagement and design contracts.
 - `docs/` — blueprint, phase plan, access reference, Docker and data-source guides.

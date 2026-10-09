@@ -7,7 +7,7 @@ still apply (provenance labels; simulation outcomes are `illustrative`; LLM text
 - Real email may leave the machine **only** through `mailer.py` when `SMTP_*` env vars are set (Gmail + app password).
   With no SMTP config, mail goes to an in-app outbox and the engine log. Never print SMTP passwords or API keys.
 - Login/registration is in scope (self-hosted in the engine; sqlite). Google SSO / Supabase / Vercel are Phase 2.
-- An LLM provider (Anthropic) may be called by the assistant when `ANTHROPIC_API_KEY` is set. Keyless must still work.
+- An LLM provider (Gemini, owner decision 2026-10-10) may be called by the assistant when `GEMINI_API_KEY` and `GEMINI_MODEL` are set. Keyless must still work.
 - Docker is in scope. Dark mode is in scope (tokens only; still no hex outside token files).
 - The product is STRATA. The old placeholder client name has been removed everywhere; do not reintroduce it. Demo clients are fictional.
 
