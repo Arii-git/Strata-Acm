@@ -14,13 +14,13 @@
 | A10 | Handoffs, Notes & Decision-Debt | green | built | Workflows, incident notes, approvals waiting hours |
 | A11 | Opportunity Radar | yellow | built (P0-lite) | /app/opportunities |
 | A12 | Simulation Lab | yellow | built-lite (S01 template inject, advance, reset) | /app/lab |
-| A13 | Data Health Guard | green | engine guard built; S13 injector cut | Sources |
+| A13 | Data Health Guard | green | built (engine guard + S13 stale/duplicate feed Lab injector) | Sources, Lab |
 | A14 | Evidence-or-Silence validator + provenance | green | built | agent trace |
 | A15 | Bring-Your-Own-CSV | yellow | not started (P2) | — |
 | A16 | WhatsApp/email drafts (simulated, never sent) | green | built | Plan tab, outbox |
 | A17 | Honest evaluation (seed A + hold-out B) | green | built | /app/evaluation |
 | A18 | Engineering Notebook (human-only) | green | built, empty | /app/notebook |
 | A19 | Persona views | green | built | persona switcher |
-| A20 | Replay mode | green | cut (env flag only) | — |
+| A20 | Replay mode | green | built (`npm run snapshot`, `npm run engine:replay`; read-only) | engine, mode chip |
 | A21 | Account Profile & Engagement Plan | yellow | built | /app/accounts/[id] |
 | A22 | Standing Routines | yellow | built | Workflows → Standing Routines |

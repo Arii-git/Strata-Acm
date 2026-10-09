@@ -13,7 +13,15 @@
     "test": "node scripts/py.mjs -m pytest -q tests/engine",
     "snapshot": "node scripts/py.mjs scripts/snapshot.py",
     "engine:replay": "node scripts/py.mjs scripts/replay_engine.py",
+    "scale": "node scripts/py.mjs scripts/scale.py",
     "demo:reset": "node scripts/py.mjs scripts/demo_reset.py",
-    "routines:tick": "node scripts/py.mjs -c \"import urllib.request;print(urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/routines/tick',method='POST')).read().decode())\""
+    "routines:tick": "node scripts/py.mjs -c \"import urllib.request;print(urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/routines/tick',method='POST')).read().decode())\"",
+    "e2e": "playwright test",
+    "lint:contrast": "node scripts/lint-contrast.mjs",
+    "lint:honesty": "node scripts/lint-honesty.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.64.0"
   }
 }

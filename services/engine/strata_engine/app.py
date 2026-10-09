@@ -533,7 +533,10 @@ def add_note(body: NoteIn) -> dict[str, Any]:
         raise HTTPException(400, "empty note")
     nid = f"N-{state.next_id('notes'):04d}"
     import re as _re
-    mentions = sorted(set(body.mentions) | {m for m in _re.findall(r"@(\w+)", body.body) if m in ROLE_LABELS})
+    alias = {"ops": "operations_manager", "operations": "operations_manager", "account": "account_manager", "am": "account_manager",
+             "sales": "sales_manager", "support": "support_manager", "business": "business_head", "head": "business_head", "qa": "qa_head"}
+    found = {alias.get(m.lower(), m.lower()) for m in _re.findall(r"@(\w+)", body.body)}
+    mentions = sorted(set(body.mentions) | {m for m in found if m in ROLE_LABELS})
     rec = {"id": nid, "created_at": state.wall_now(), **body.model_dump(), "mentions": mentions}
     state.put("notes", nid, rec)
     state.audit("human", body.author, "note.posted", "note", nid, {"mentions": mentions, "incident": body.incident_id})

@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 from .config import SIM_NOW, WEEKS
-from .signals import (CUR, D0, LABELS, Frames, Sig, account_signals, band, noisy_or, roll4, sku_signals,
+from .signals import (CUR, D0, LABELS, Frames, Sig, account_signals, band, noisy_or, previous_run, roll4, sku_signals,
                       week_idx, week_start)
 
 AE_WORDS = ("dizzy", "unwell", "reaction", "rash", "hospitalised", "hospitalized", "vomit", "swelling", "breathless")
@@ -148,7 +148,7 @@ def evaluate(t: dict[str, pd.DataFrame], ref_prefix: str = "INC-2026-") -> Detec
             regional_accounts.update(accs)
             witnesses = [sg for a in slow for sg in acc_sigs[a] if sg.signal_key == "response_time_delta"]
             score, n, srcs = noisy_or([sig] + witnesses)
-            exposure = sum(v12[a] for a in accs)
+            exposure = sum(v12[a] for a in slow)  # only the accounts actually answering slower
             onset_w = onset_estimate(vals, 8)
             incidents.append(Incident(ref="", kind="risk", title=f"Support response slowed across {regions[rid]}",
                                       scope="region", scope_key=str(rid), account_id=None, severity=band(score),
@@ -201,7 +201,9 @@ def evaluate(t: dict[str, pd.DataFrame], ref_prefix: str = "INC-2026-") -> Detec
                                     scope_key=f"{aid}/{sku}", account_id=aid, value=float(sku_fill), baseline=0.975,
                                     robust_z=float((sku_fill - 0.975) / (1.4826 * 0.02)), delta=float(sku_fill - 0.975),
                                     note=f"Fill rate on {sku} for this account, last 4 weeks"))
-        sc, n, srcs = noisy_or(own + attached)
+        prev_sc, _, _ = noisy_or(previous_run(own))
+        persistent = prev_sc >= 50  # same pattern already at incident level in the previous weekly run
+        sc, n, srcs = noisy_or(own + attached, persistent=persistent)
         scores[aid] = (sc, n, srcs)
         if sc < 50:
             continue

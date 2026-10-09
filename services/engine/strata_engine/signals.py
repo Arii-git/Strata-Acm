@@ -237,12 +237,15 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
         x = r[:, CUR]
         med, smad, z = robust(x, r[:, base_slice], floor_abs)
         delta = np.where(med > 0, x / np.where(med > 0, med, 1) - 1, np.nan)
+        x_prev = r[:, CUR - 1]
         if cm:
             cmv = common_mode(delta)
             if cmv != 0.0:
                 x = x - cmv * med
+                x_prev = x_prev - cmv * med
                 delta = delta - cmv
                 z = (x - med) / smad
+        z_prev = (x_prev - med) / smad
         for k, aid in enumerate(f.ids):
             if key.startswith("order") and int(aid) in suppressed_order_accounts:
                 continue
@@ -250,7 +253,7 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
                 id=f"EV-{aid}-{key}", signal_key=key, scope="account", scope_key=str(aid), account_id=int(aid),
                 value=float(x[k]), baseline=float(med[k]), robust_z=float(z[k]),
                 delta=None if not np.isfinite(delta[k]) else float(delta[k]),
-                series=series_for(f, weekly_for_series, k, med[k] / 4.0)))
+                series=series_for(f, weekly_for_series, k, med[k] / 4.0), extra={"z_prev": float(z_prev[k])}))
 
     count_signal("order_volume_delta", f.units_adj, f.units_adj, 0.0, True)
     count_signal("order_value_delta", f.value_adj, f.value_adj, 0.0, True)
@@ -264,6 +267,7 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
             ratio = np.where(rd > 0, rn / rd, np.nan)
         x = ratio[:, CUR]
         med, smad, z = robust(x, ratio[:, base_slice], floor_abs)
+        z_prev = (ratio[:, CUR - 1] - med) / smad
         with np.errstate(divide="ignore", invalid="ignore"):
             wk = np.where(den > 0, num / den, np.nan)
         for k, aid in enumerate(f.ids):
@@ -272,7 +276,8 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
             out[int(aid)].append(Sig(
                 id=f"EV-{aid}-{key}", signal_key=key, scope="account", scope_key=str(aid), account_id=int(aid),
                 value=float(x[k]), baseline=float(med[k]), robust_z=float(z[k]),
-                delta=float(x[k] - med[k]), series=series_for(f, np.nan_to_num(wk, nan=0.0), k, med[k])))
+                delta=float(x[k] - med[k]), series=series_for(f, np.nan_to_num(wk, nan=0.0), k, med[k]),
+                extra={"z_prev": float(z_prev[k])} if np.isfinite(z_prev[k]) else {}))
 
     ratio_signal("fill_rate", f.filled, f.units, 0.01)
     ratio_signal("delivery_delay_days", f.delay_sum, f.n_lines, 0.25)
@@ -294,6 +299,7 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
                 wk_med[int(a_i), i] = np.median(sel)
     x = resp[:, CUR]
     med, smad, z = robust(x, resp[:, base_slice], 0.0)
+    z_prev_r = (resp[:, CUR - 1] - med) / smad
     delta = x / med - 1
     for k, aid in enumerate(f.ids):
         if np.isfinite(x[k]):
@@ -301,7 +307,8 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
                 id=f"EV-{aid}-response_time_delta", signal_key="response_time_delta", scope="account",
                 scope_key=str(aid), account_id=int(aid), value=float(x[k]), baseline=float(med[k]),
                 robust_z=float(z[k]), delta=float(delta[k]),
-                series=series_for(f, np.nan_to_num(wk_med, nan=0.0), k, med[k])))
+                series=series_for(f, np.nan_to_num(wk_med, nan=0.0), k, med[k]),
+                extra={"z_prev": float(z_prev_r[k])} if np.isfinite(z_prev_r[k]) else {}))
     f.resp_window = resp
 
     # overdue receivable ratio at each week end
@@ -320,13 +327,15 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
         ratio[:, wi] = np.where(b > 0, overdue / np.maximum(b, 1), np.nan)
     x = ratio[:, CUR]
     med, smad, z = robust(x, ratio[:, 12:BASE_END + 1], 0.15)
+    z_prev_o = (ratio[:, CUR - 1] - med) / smad
     for k, aid in enumerate(f.ids):
         if np.isfinite(x[k]):
             out[int(aid)].append(Sig(
                 id=f"EV-{aid}-overdue_receivable_ratio", signal_key="overdue_receivable_ratio", scope="account",
                 scope_key=str(aid), account_id=int(aid), value=float(x[k]), baseline=float(med[k]),
                 robust_z=float(z[k]), delta=float(x[k] - med[k]),
-                series=series_for(f, np.nan_to_num(ratio, nan=0.0), k, med[k])))
+                series=series_for(f, np.nan_to_num(ratio, nan=0.0), k, med[k]),
+                extra={"z_prev": float(z_prev_o[k])} if np.isfinite(z_prev_o[k]) else {}))
 
     # prescriber visit gap (hospital / clinic accounts with linked prescribers)
     iv = f.i[f.i["prescriber_id"].notna()]
@@ -342,10 +351,13 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
         med_gap = float(np.median(hist_gaps))
         mad = max(float(np.median(np.abs(hist_gaps - med_gap))), 0.05 * med_gap, 1.0)
         z = (cur_gap - med_gap) / (1.4826 * mad)
+        prev_ts = ts[ts < now - pd.Timedelta(days=7)]
+        prev_gap = float((now - pd.Timedelta(days=7) - prev_ts.iloc[-1]).days) if len(prev_ts) else cur_gap
+        z_prev_g = (prev_gap - med_gap) / (1.4826 * mad)
         out[aid].append(Sig(id=f"EV-{aid}-prescriber_visit_gap_days", signal_key="prescriber_visit_gap_days",
                             scope="account", scope_key=str(aid), account_id=aid, value=cur_gap, baseline=med_gap,
                             robust_z=float(z), delta=cur_gap - med_gap,
-                            series=series_for(f, f.visits, int(a_i), None)))
+                            series=series_for(f, f.visits, int(a_i), None), extra={"z_prev": float(z_prev_g)}))
     return out
 
 
@@ -379,7 +391,18 @@ def sku_signals(f: Frames) -> dict[str, list[Sig]]:
     return out
 
 
-def noisy_or(sigs: list[Sig]) -> tuple[int, int, list[str]]:
+def previous_run(sigs: list[Sig]) -> list[Sig]:
+    """The same account-scope signals as they stood at the previous weekly run (window ending one week earlier,
+    same baseline). Used only for the persistence bonus. Signals without a previous value are left out (conservative)."""
+    out = []
+    for s in sigs:
+        if "z_prev" in s.extra and np.isfinite(s.extra["z_prev"]):
+            out.append(Sig(id=s.id, signal_key=s.signal_key, scope=s.scope, scope_key=s.scope_key, account_id=s.account_id,
+                           value=s.value, baseline=s.baseline, robust_z=float(s.extra["z_prev"]), delta=None))
+    return out
+
+
+def noisy_or(sigs: list[Sig], persistent: bool = False) -> tuple[int, int, list[str]]:
     adv = [s for s in sigs if s.is_adverse]
     sources = sorted({s.source for s in adv})
     if not adv:
@@ -387,7 +410,7 @@ def noisy_or(sigs: list[Sig]) -> tuple[int, int, list[str]]:
     raw = 1 - float(np.prod([1 - s.p for s in adv]))
     n = len(sources)
     div = {1: 0.55, 2: 0.80}.get(n, 1.0)
-    score = int(round(100 * min(1.0, raw * div)))
+    score = int(round(100 * min(1.0, raw * div + (0.05 if persistent else 0.0))))
     if n < 3:
         score = min(score, 69)  # hard rule: high/critical need >= 3 independent sources
     return score, n, sources

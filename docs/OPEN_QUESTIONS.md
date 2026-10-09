@@ -9,6 +9,7 @@
 7. **Grouped incidents.** Region (S10) and rep-vacancy (S08) incidents are created by rule when ≥ 5 accounts in the group show the signal. Their score is the noisy-OR of the group's witnesses, capped by the single/two-source rule.
 8. **Regulatory incidents** get display severity `high` regardless of score (banding is bypassed per the catalog's hard rule); the risk score shown is still the computed noisy-OR value.
 9. **API types** in `apps/web/src/lib/api/types.ts` are hand-written from docs/API.md; generating them with `openapi-typescript` is a follow-up.
-10. **Persistence bonus (+0.05)** is not implemented: it needs a second weekly evaluation run. Scores are therefore slightly conservative.
+10. **Persistence bonus (+0.05)** is implemented as: the same account's signals re-scored on the window ending one week earlier (same baseline); if that score was already ≥ 50, add 0.05. Signals with no previous value (SKU-scope) are left out, which is conservative.
 11. **Approval roles.** A plan can be approved by its `requires_role`, or by an Operations Manager or Business Head, except QA-routed plans, which only `qa_head` can approve (two different names for four-eyes).
 12. **Ask the mentor**: the Blueprint §1.1 questions are still open (internal tools, a rupee figure for a lost stockist, the real manual-review time).
+13. **Contract conflict (S03 / A6).** scenarios.yaml expects S03 (near-expiry exposure, a single inventory source) to be detected as `elevated`. Under signal_catalog.yaml, a single-source witness scores at most 100 × 0.45 × 0.55 ≈ 25 (`healthy`), so S03 cannot become an incident without a contract change (e.g. treating expiry exposure as its own rule, like the regulatory class). Not built; it needs the team to decide.

@@ -470,7 +470,9 @@ class Gen:
                                                        "synthetic": True}, indent=2))
 
 
-def generate(seed: int, out: Path) -> dict:
+def generate(seed: int, out: Path, accounts: int = 240) -> dict:
+    global N_ACCOUNTS
+    N_ACCOUNTS = accounts
     g = Gen(seed)
     g.reference()
     g.select()
