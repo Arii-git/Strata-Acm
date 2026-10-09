@@ -24,3 +24,5 @@
 | A20 | Replay mode | green | built (`npm run snapshot`, `npm run engine:replay`; read-only) | engine, mode chip |
 | A21 | Account Profile & Engagement Plan | yellow | built | /app/accounts/[id] |
 | A22 | Standing Routines | yellow | built | Workflows → Standing Routines |
+| A23 | Guided path (6 steps through the top case) | green | built (human-requested, review 1) | Home → Take the guided path |
+| A24 | Metric dictionary + Explain-this-page + glossary | green | built (human-requested, review 1) | every page, /app/help |

@@ -37,13 +37,15 @@ for ref in [i["ref"] for i in incs]:
     rec[f"POST /incidents/{ref}/investigate"] = c.post(f"/incidents/{ref}/investigate").json()
 for p in ["/incidents", "/opportunities", "/portfolio/health", "/sources", "/signals/catalog", "/accounts", "/memory/items",
           "/memory/items?kind=outcome", "/memory/items?kind=incident", "/memory/items?kind=sop", "/eval/latest", "/routines",
-          "/workflows", "/outcomes", "/notes", "/audit", "/audit/verify", "/time-to-action", "/notebook"]:
+          "/workflows", "/outcomes", "/notes", "/audit", "/audit/verify", "/time-to-action", "/notebook",
+          "/events", "/events?limit=15", "/metrics/dictionary", "/taxonomy", "/routines"]:
     get(p)
 for ps in PERSONAS:
     for p in ["/briefing", "/risks", "/approvals", "/workflows", "/notes"]:
         get(f"{p}?persona={ps}")
 accs = {i["account_id"] for i in incs if i["account_id"]} | {a["id"] for a in rec["GET /accounts"]["items"][:40]}
 for ref in [i["ref"] for i in incs]:
+    get(f"/events?incident={ref}")
     d = get(f"/incidents/{ref}")
     for b in d.get("blast_radius", []):
         accs.add(b["account_id"])
