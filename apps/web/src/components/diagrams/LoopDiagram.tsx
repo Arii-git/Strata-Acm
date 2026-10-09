@@ -46,7 +46,11 @@ function edge(from: { x: number; y: number }, to: { x: number; y: number }) {
  * `activeKey` highlights one stage (used by the How STRATA works stepper). Colours come only from CSS classes
  * in styles/lanes/home.css, so the diagram follows the light and dark tokens.
  */
-export function LoopDiagram({ caption = true, activeKey }: { caption?: boolean; activeKey?: string | null }) {
+export function LoopDiagram({ caption = true, activeKey, onStage }: {
+  caption?: boolean; activeKey?: string | null;
+  /** When set (e.g. on the public landing page), clicking a stage selects it instead of opening its page. */
+  onStage?: (key: string) => void;
+}) {
   const router = useRouter();
   const uid = useId().replace(/:/g, "");
   const titleId = `loop-title-${uid}`;
@@ -87,10 +91,12 @@ export function LoopDiagram({ caption = true, activeKey }: { caption?: boolean; 
           return (
             <a
               key={s.key}
-              href={s.href}
+              href={onStage ? `#stage-${s.key}` : s.href}
               className={`diagram__link${s.key === "act" ? " is-gate" : ""}${activeKey === s.key ? " is-active" : ""}`}
-              aria-label={`${i + 1}. ${s.label}: ${s.line}. Opens ${s.href.replace("/app/", "")}.`}
+              aria-label={onStage ? `${i + 1}. ${s.label}: ${s.line}.` : `${i + 1}. ${s.label}: ${s.line}. Opens ${s.href.replace("/app/", "")}.`}
+              aria-current={onStage && activeKey === s.key ? "step" : undefined}
               onClick={(ev) => {
+                if (onStage) { ev.preventDefault(); onStage(s.key); return; }
                 if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button !== 0) return;
                 ev.preventDefault();
                 router.push(s.href);

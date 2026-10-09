@@ -1,33 +1,42 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import {
-  IconArrowLeft, IconArrowRight, IconBuildingCommunity, IconChartBar, IconClipboardCheck,
-  IconLogin, IconRoute, IconShieldCheck, IconUsersGroup,
-} from "@tabler/icons-react";
+import { Suspense, useEffect, useState } from "react";
+import { IconArrowLeft, IconArrowRight, IconBuildingCommunity, IconLogin, IconUsersGroup } from "@tabler/icons-react";
 import { DISTRICT } from "@config/district";
+import { LOOP_STAGES, LoopDiagram } from "@/components/diagrams/LoopDiagram";
+import { GameTutorial } from "./_components/GameTutorial";
 import { Button } from "@/components/ui/Button";
 import { SignInCard } from "./(auth)/_components/SignInCard";
 import { CardSkeleton } from "./(auth)/_components/shared";
 import "@/styles/lanes/auth.css";
+import "@/styles/lanes/home.css";
+import "@/styles/lanes/landing.css";
 
 type Step = "starter" | "overview" | "tutorial" | "portal" | "login";
 type Portal = "company" | "user";
 
-const LOOP = [
-  ["Observe", "Read the connected business signals."],
-  ["Detect", "Spot changes worth a closer look."],
-  ["Investigate", "Show the evidence and likely cause."],
-  ["Remember", "Find similar cases and procedures."],
-  ["Act", "Draft a plan for a person to approve."],
-  ["Learn", "Record the outcome for next time."],
-] as const;
-
-const TOUR = [
-  { icon: IconChartBar, title: "Start with the briefing", body: "See the few items that need your attention first. The short sentence below each number tells you what changed and why it matters." },
-  { icon: IconRoute, title: "Open one case", body: "Follow the evidence, the likely cause and similar past work. Source IDs open the exact record behind an explanation." },
-  { icon: IconClipboardCheck, title: "Decide, then track", body: "Approve, change or reject a proposed plan. STRATA records the decision and shows the resulting internal tasks." },
-] as const;
+/** How STRATA works: the loop diagram steps through the six stages on its own; any stage can be picked. */
+function LoopTour() {
+  const [i, setI] = useState(0);
+  const [auto, setAuto] = useState(true);
+  useEffect(() => {
+    if (!auto || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => setI((x) => (x + 1) % LOOP_STAGES.length), 2600);
+    return () => window.clearInterval(id);
+  }, [auto]);
+  const s = LOOP_STAGES[i];
+  const Ico = s.icon;
+  return (
+    <div className="lp-looptour">
+      <LoopDiagram caption={false} activeKey={s.key} onStage={(key) => { setAuto(false); setI(LOOP_STAGES.findIndex((x) => x.key === key)); }} />
+      <div className="lp-looptour__now" aria-live="polite">
+        <span className="lp-looptour__n">{i + 1}/6</span>
+        <Ico size={20} aria-hidden="true" />
+        <div><strong>{s.label}</strong><p>{s.alt}</p></div>
+      </div>
+    </div>
+  );
+}
 
 export default function Landing() {
   const [step, setStep] = useState<Step>("starter");
@@ -66,22 +75,20 @@ export default function Landing() {
           <section className="lp-flow" aria-labelledby="overview-title">
             <p className="lp__eyebrow">How STRATA works</p>
             <h1 id="overview-title" className="lp-flow__title">One calm loop from signal to decision.</h1>
-            <ol className="lp-loop" aria-label="STRATA workflow">
-              {LOOP.map(([title, body], index) => <li key={title}><span>{index + 1}</span><div><strong>{title}</strong><p>{body}</p></div></li>)}
-            </ol>
-            <div className="lp-actions"><Button variant="primary" onClick={() => setStep("tutorial")}>Take the tutorial <IconArrowRight size={16} aria-hidden="true" /></Button></div>
+            <p className="lp-flow__intro">This is the brain behind STRATA. Every problem goes round the same six steps, and step 5 always waits for a person.</p>
+            <LoopTour />
+            <div className="lp-actions">
+              <Button variant="primary" onClick={() => setStep("tutorial")}>Play the tutorial <IconArrowRight size={16} aria-hidden="true" /></Button>
+              <Button variant="ghost" onClick={() => setStep("portal")}>Skip to login</Button>
+            </div>
           </section>
         ) : null}
 
         {step === "tutorial" ? (
-          <section className="lp-flow" aria-labelledby="tutorial-title">
+          <section className="lp-flow lp-flow--tutorial" aria-labelledby="tutorial-title">
             <p className="lp__eyebrow">Guided tutorial</p>
-            <h1 id="tutorial-title" className="lp-flow__title">How to move through the console.</h1>
-            <div className="lp-tour">
-              {TOUR.map(({ icon: Icon, title, body }, index) => <article key={title} className="lp-tour__item"><span className="lp-tour__step">{index + 1}</span><Icon size={22} aria-hidden="true" /><h2>{title}</h2><p>{body}</p></article>)}
-            </div>
-            <div className="lp-safety"><IconShieldCheck size={18} aria-hidden="true" /><span>STRATA explains each number in plain words and only a person can approve a plan.</span></div>
-            <div className="lp-actions"><Button variant="primary" onClick={() => setStep("portal")}>Choose a portal <IconArrowRight size={16} aria-hidden="true" /></Button></div>
+            <h1 id="tutorial-title" className="lp-flow__title">Learn STRATA by playing one case.</h1>
+            <GameTutorial onDone={() => setStep("portal")} />
           </section>
         ) : null}
 
