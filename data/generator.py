@@ -212,7 +212,6 @@ class Gen:
         order_rows = []
         weeks = [week_start(w) for w in range(WEEKS)]
         seas = np.array([self.season(ws + timedelta(days=3)) for ws in weeks])
-        onset_w = {HERO: WEEKS - 5}  # 35 days before now = week 99 start? (week_start(99) = D0-35)
         for _, a in self.accounts.iterrows():
             aid = int(a["id"])
             drift_sd = 0.003 if aid == HERO else 0.004
