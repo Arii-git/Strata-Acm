@@ -1,0 +1,224 @@
+# =====================================================================
+# STRATA | contracts/signal_catalog.yaml | v0.1
+# The signal engine implements EXACTLY these signals. Adding one requires
+# a catalog entry first. Every signal has: definition, source system,
+# window, baseline, adverse direction, and a plain-English explanation
+# that the UI prints under every chart/number (the "light-font caption").
+# =====================================================================
+engine_version: "0.1.0"
+conventions:
+  as_of: "SIM_NOW (single simulated clock; never wall-clock in engine logic)"
+  evaluate: "evaluate(as_of) is a PURE function of data <= as_of. The demo calls it at SIM_NOW. Lead time in Evaluation is computed by BACKTEST: call evaluate() at each weekly as_of over the history and take the earliest as_of that detects a planted scenario (so 'first detected' in the demo = SIM_NOW run; 'lead time' = onset -> earliest backtest detection; two different things, both labelled)."
+  current_window: "last 4 weeks ending at as_of (value x_now = aggregate over the window)"
+  baseline_method: "distribution of the SAME aggregate computed on rolling 4-week windows (stride 1 week) over the account's own history from as_of-104w up to as_of-5w (a 1-week buffer excludes the current window), each seasonality-adjusted. median and MAD come from that distribution."
+  robust_z: "(x_now - median) / (1.4826 * MAD); MAD floor = 0.05 * |median| to avoid divide-by-zero on flat series"
+  weak_threshold_z: 2.0
+  strong_threshold_z: 3.0
+  min_history_weeks: 26            # fewer rolling baseline points than this -> signal suppressed, never guessed
+  data_health_guard:               # A13. Two scopes, both explicit:
+    feed_level: "if a source feed is stale (> 3x expected_every_minutes at as_of) or status != fresh, signals from THAT source are suppressed portfolio-wide and a data_quality notice is raised (Sources page only). Base seeds have all feeds fresh; stale-feed state exists only via Lab injection (S13)."
+    account_level: "if an account's order rows have duplicate_ratio > 0.05 in the latest load, that account's order-derived signals are suppressed and a notice is raised for it."
+  seasonality: "week-of-year index estimated from portfolio-wide weekly totals over 104 weeks of history (needs 2 years so the 'festival dip' appears in a PRIOR year too); plus a common-mode adjustment: if >60% of accounts move the same direction in the window, subtract the portfolio median move before per-account z-scoring. S11 must be absorbed by these two mechanisms, not by special-casing."
+  source_counting: "n_sources = number of DISTINCT source systems among an incident's supporting adverse signals. SKU/batch/region-scope signals attach to an account incident when the account bought that SKU/batch (or belongs to the region) in the last 8 weeks and the signal is adverse; they count under their own source (e.g. stock_cover_days -> inventory)."
+  driver_label: "Risk Register 'likely driver' = the signal class with the largest weighted contribution (computed, descriptive). The attributed ROOT CAUSE (cause_category) comes only from the Investigator in Phase 2; before that the UI shows 'not yet investigated'."
+
+signals:
+  # ---------------- commercial ----------------
+  - key: order_volume_delta
+    class: commercial
+    source: orders
+    definition: "Units ordered, last 4 weeks vs baseline weekly mean x 4, as fractional change."
+    adverse: down
+    weight: 0.50
+    caption: "How much less (or more) this account bought recently than its own normal. A drop alone is weak; a drop with other signals is a pattern."
+  - key: order_value_delta
+    class: commercial
+    source: orders
+    definition: "Order value (INR), same windows as order_volume_delta."
+    adverse: down
+    weight: 0.35
+    caption: "Same idea as volume but in rupees, so a mix shift to cheaper products shows up."
+  - key: reorder_interval_drift
+    class: commercial
+    source: orders
+    definition: "For chronic-therapy SKUs only: median days between reorders, last 8 weeks vs baseline. Positive = reordering later."
+    adverse: up
+    weight: 0.45
+    caption: "Patients on chronic therapy need steady refills. When a pharmacy reorders later than usual, patients may be missing doses or switching brands."
+  - key: opportunity_volume_growth
+    class: commercial
+    source: orders
+    definition: "Order volume growth for an account in >=2 therapy areas while a complementary therapy area has near-zero purchase."
+    adverse: none        # favourable-only signal; creates kind=opportunity
+    weight: 0.50
+    caption: "This account is growing fast in related products but does not buy a complementary one. That gap is a sales opportunity."
+
+  # ---------------- supply ----------------
+  - key: fill_rate
+    class: supply
+    source: orders
+    definition: "sum(qty_filled)/sum(qty_ordered), last 4 weeks. Compared to baseline fill rate."
+    adverse: down
+    weight: 0.55
+    caption: "Share of what the customer asked for that we actually shipped. Falling fill rate usually means a supply problem on our side, not a demand problem on theirs."
+  - key: delivery_delay_days
+    class: supply
+    source: orders
+    definition: "Mean (delivered_date - promised_date) in days, last 4 weeks."
+    adverse: up
+    weight: 0.40
+    caption: "Average lateness against what we promised. Customers feel this before they complain."
+  - key: stock_cover_days
+    class: supply
+    source: inventory
+    scope: sku
+    definition: "warehouse on_hand / trailing 4-week mean daily dispatch, per SKU."
+    adverse: down
+    weight: 0.45
+    caption: "How many days of this product the warehouse can still ship. Under about a week it becomes the likely cause of downstream customer problems."
+  - key: eta_slip_count
+    class: supply
+    source: inventory
+    scope: sku
+    definition: "Number of times inbound_eta has moved later in the last 28 days."
+    adverse: up
+    weight: 0.35
+    caption: "Each slip of the supplier's promised arrival date is evidence of a supplier or manufacturing delay."
+
+  # ---------------- service ----------------
+  - key: complaint_count_delta
+    class: service
+    source: support
+    definition: "Count of complaints (kinds: service, delivery, billing) in the last 4 weeks vs baseline. COUNT, not rate: this is what deck slide 7 shows ('Complaints up 47%')."
+    adverse: up
+    weight: 0.45
+    caption: "How many more complaints this account raised than it normally does in four weeks. Note that fewer orders with more complaints means the experience got worse, not just busier."
+  - key: response_time_delta
+    class: service
+    source: support
+    definition: "Median (first_response_at - opened_at), last 4 weeks vs baseline."
+    adverse: up
+    weight: 0.30
+    caption: "How much slower we are answering this account. Slow replies make a supply problem feel like neglect."
+  - key: support_backlog_region
+    class: service
+    source: support
+    scope: region
+    definition: "Open tickets older than SLA per 100 tickets, by region."
+    adverse: up
+    weight: 0.35
+    caption: "When many accounts in one region get slower at once, the cause is support capacity, not individual customers."
+
+  # ---------------- field / relationship ----------------
+  - key: interaction_frequency_delta
+    class: field
+    source: crm
+    definition: "Visits+calls+WhatsApp touchpoints per 4 weeks vs baseline."
+    adverse: down
+    weight: 0.30
+    caption: "How much less we are in touch with this account. Relationships fade quietly before orders fall."
+  - key: prescriber_visit_gap_days
+    class: field
+    source: crm
+    definition: "Days since last rep visit to a nephrologist linked to a hospital/clinic account, vs that prescriber's usual cadence."
+    adverse: up
+    weight: 0.30
+    caption: "Doctors who stop being visited tend to prescribe less over time. This catches the gap early."
+  - key: rep_coverage_ratio
+    class: field
+    source: workforce
+    scope: region
+    definition: "Active reps / accounts per region vs the portfolio norm."
+    adverse: down
+    weight: 0.30
+    caption: "Accounts per rep. When a rep leaves, every account they covered starts to drift."
+
+  # ---------------- finance ----------------
+  - key: overdue_receivable_ratio
+    class: finance
+    source: finance
+    definition: "Overdue (>0 days past due) outstanding / trailing 12-week billing."
+    adverse: up
+    weight: 0.40
+    caption: "How much of what this account owes us is late. Paired with falling orders it suggests the customer is under financial stress."
+
+  # ---------------- quality (regulatory-sensitive, A7) ----------------
+  - key: batch_complaint_cluster
+    class: quality
+    source: support
+    scope: batch
+    definition: "Quality-kind complaints for the same batch_id from >=2 distinct accounts within 21 days."
+    adverse: up
+    weight: 0.70
+    regulatory_sensitive: true
+    caption: "Several customers complaining about the same batch is a quality pattern. Strata routes it to the QA head and never acts on it automatically."
+  - key: suspected_ae_flag
+    class: quality
+    source: support
+    definition: "Complaint text classified as possible adverse-event report (keyword + classifier-lite). Routing flag only, not a medical judgement."
+    adverse: up
+    weight: 0.80
+    regulatory_sensitive: true
+    caption: "A complaint that might describe a patient reaction. Strata only makes sure a human on the QA side sees it; it makes no medical decision."
+  - key: expiry_exposure_value
+    class: supply
+    source: inventory
+    scope: account
+    definition: "INR value of channel stock expiring within 90 days where trailing sell-through implies it will not clear."
+    adverse: up
+    weight: 0.45
+    caption: "Stock sitting at a customer that will probably expire before it sells. This becomes returns and credit notes unless moved."
+
+  # ---------------- data health (A13) ----------------
+  - key: feed_freshness_lag
+    class: data_health
+    source: docs   # evaluated on every source feed; stored per feed
+    definition: "now - last_ingested_at in multiples of expected_every_minutes."
+    adverse: up
+    weight: 0.00   # never contributes to business risk; gates other signals
+    caption: "How out of date each data source is. A stale feed can fake a customer problem, so Strata pauses judgement until the data is fresh."
+  - key: duplicate_ratio
+    class: data_health
+    source: orders
+    definition: "Share of rows in the latest load that duplicate an existing order key."
+    adverse: up
+    weight: 0.00
+    caption: "Repeated rows can look like a sudden spike in orders. A high value means the data, not the customer, changed."
+
+cause_rules:                         # DETERMINISTIC candidate causes. The Investigator (LLM or keyless) may only rank/explain candidates that pass here.
+  # Keyless mode (LLM_PROVIDER=none): confidence = fraction of a rule's conditions satisfied, weighted; top candidate wins; ties broken by rule order.
+  - {cause: supplier_delay,      requires: ["stock_cover_days adverse (<7d) on an SKU the account bought", "eta_slip_count >= 1"], supports: ["fill_rate adverse", "delivery_delay_days adverse"]}
+  - {cause: channel_stockout,    requires: ["reorder_interval_drift adverse"], supports: ["downstream channel_stock zero for the SKU", "order_volume_delta weakly adverse"]}
+  - {cause: inventory_mismatch,  requires: ["expiry_exposure_value adverse"], supports: ["sell-through below allocation"]}
+  - {cause: batch_quality,       requires: ["batch_complaint_cluster OR suspected_ae_flag"], supports: ["same batch across >=2 accounts"], regulatory_sensitive: true}
+  - {cause: field_coverage_gap,  requires: ["prescriber_visit_gap_days adverse OR rep_coverage_ratio adverse OR interaction_frequency_delta adverse"], supports: ["order_volume_delta adverse (lagging)"]}
+  - {cause: payment_stress,      requires: ["overdue_receivable_ratio adverse"], supports: ["order_volume_delta adverse", "billing complaints up"]}
+  - {cause: support_capacity,    requires: ["support_backlog_region adverse OR response_time_delta adverse across >=5 accounts in a region"], supports: []}
+  - {cause: demand_shift,        requires: ["opportunity_volume_growth favourable"], supports: []}
+  - {cause: data_quality,        requires: ["feed_freshness_lag OR duplicate_ratio adverse"], supports: []}
+  - {cause: seasonal,            requires: ["common-mode movement across >60% of accounts"], never_an_incident: true}
+  - {cause: unknown,             requires: [], note: "fallback when no rule passes; confidence shown as low; plan limited to 'investigate manually'"}
+
+aggregation:
+  method: "noisy_or"
+  formula: |
+    p_i = weight_i * clip(abs(robust_z_i) / 4, 0, 1)        (adverse signals only)
+    risk_raw = 1 - prod(1 - p_i)
+    diversity_factor = {1 source: 0.55, 2 sources: 0.80, 3+ sources: 1.00}
+    persistence_bonus = +0.05 if the same incident persisted >= 2 consecutive weekly runs
+    risk_score = round(100 * min(1, risk_raw * diversity_factor + persistence_bonus))
+  severity_bands:
+    healthy:  "0-29"
+    watch:    "30-49"
+    elevated: "50-69"
+    high:     "70-84   (requires n_sources >= 3)"
+    critical: "85-100  (requires n_sources >= 3)"
+  hard_rules:
+    - "A single-source incident can never be above 'elevated'. (Deck slide 7: no single metric looks alarming; together they form a pattern.)"
+    - "Regulatory-sensitive signals bypass banding: they always create an incident routed to qa_head with four_eyes=true, regardless of score."
+    - "Constants (weights, divisor 4, diversity factors) may be tuned on seed A only. Seed B is a held-out evaluation seed; report results on it unmodified."
+alerting:
+  alert_budget_per_persona_per_day: 7      # A4: rank = revenue_exposure x confidence x urgency; remainder shown as 'held back' with reasons
+  confidence: "cause_confidence if the incident has been investigated, else min(1, n_sources / 4)"
+  urgency: "by severity band: critical 1.0, high 0.8, elevated 0.6, watch 0.4"
+  persona_filter: "an incident is eligible for a persona if its owner_role set (from the plan, or default by cause/class) includes that persona; business_head sees the top-ranked across all"

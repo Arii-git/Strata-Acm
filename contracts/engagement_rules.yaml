@@ -1,0 +1,99 @@
+# =====================================================================
+# STRATA | contracts/engagement_rules.yaml | v0.1
+# A21 Account Profile & Engagement Plan  +  A22 Standing Routines.
+# Deterministic, evidence-cited, no LLM-generated numbers. All rule text is
+# authored as DRAFT - TEAM TO REVIEW (Arihant/Yogesh rewrite the ones used in the demo).
+# Placeholders like {orders_delta} are filled from COMPUTED fields only.
+# Purpose: answers the brief's "strengthen and personalize customer relationships",
+# "customer engagement and relationship management" and "automate routine processes".
+# =====================================================================
+authored_by: "DRAFT - TEAM TO REVIEW"
+customer_definition: >
+  A "customer" in STRATA = a B2B channel account of a nephrology pharma company: stockist, chemist chain,
+  hospital pharmacy or nephrology clinic. Prescribers and downstream pharmacy stock-outs appear as signals
+  about an account. No patient data is ever used.
+
+next_best_actions:                       # shown on /app/accounts/[id]; max 3 per account, ranked by revenue exposure x confidence
+  - id: ER01
+    when: "interaction_frequency_delta adverse AND tier in [A,B]"
+    action: "Book a rep touchpoint this week; touchpoints are {interaction_delta} vs this account's norm."
+    owner_role: account_manager
+    draft_channel: whatsapp_draft
+    due_in_hours: 72
+    evidence: [interaction_frequency_delta]
+  - id: ER02
+    when: "opportunity_volume_growth favourable"
+    action: "Plan a cross-sell visit with a sample plan: volume in related lines is {growth} while the complementary line is not bought."
+    owner_role: sales_manager
+    draft_channel: email_draft
+    due_in_hours: 120
+    evidence: [opportunity_volume_growth]
+  - id: ER03
+    when: "reorder_interval_drift adverse AND account_type in [stockist, chemist_chain]"
+    action: "Call to confirm chronic-therapy availability downstream; reorder gap is {reorder_drift_days} days longer than normal."
+    owner_role: account_manager
+    draft_channel: whatsapp_draft
+    due_in_hours: 48
+    evidence: [reorder_interval_drift]
+  - id: ER04
+    when: "expiry_exposure_value adverse"
+    action: "Propose redistributing near-expiry stock to a faster-moving account; exposure is {expiry_exposure_inr}."
+    owner_role: operations_manager
+    draft_channel: task
+    due_in_hours: 72
+    evidence: [expiry_exposure_value]
+  - id: ER05
+    when: "overdue_receivable_ratio adverse AND order_volume_delta adverse"
+    action: "Credit review call before the next dispatch; {overdue_ratio} of billing is overdue while orders fall."
+    owner_role: account_manager
+    draft_channel: email_draft
+    due_in_hours: 48
+    evidence: [overdue_receivable_ratio, order_volume_delta]
+  - id: ER06
+    when: "prescriber_visit_gap_days adverse AND account_type in [hospital_pharmacy, nephrology_clinic]"
+    action: "Schedule the overdue nephrologist visit; last visit was {visit_gap_days} days ago against a usual cadence."
+    owner_role: account_manager
+    draft_channel: task
+    due_in_hours: 120
+    evidence: [prescriber_visit_gap_days]
+  - id: ER07
+    when: "complaint_count_delta adverse AND response_time_delta adverse"
+    action: "Support follow-up call to acknowledge open complaints; response time is {response_delta} slower than normal."
+    owner_role: support_manager
+    draft_channel: whatsapp_draft
+    due_in_hours: 24
+    evidence: [complaint_count_delta, response_time_delta]
+  - id: ER08
+    when: "no adverse signals AND tier == A AND last_review_days > 90"
+    action: "Quarterly relationship review: account is stable; no review logged for {last_review_days} days."
+    owner_role: account_manager
+    draft_channel: task
+    due_in_hours: 336
+    evidence: [interaction_frequency_delta]
+
+# Regulatory-sensitive classes NEVER generate engagement actions (route-only to QA, see signal_catalog).
+
+standing_routines:                       # A22. A human approves each routine ONCE (approval decision recorded with kind='standing').
+  # They run on the SIM clock when the Lab advances time (POST /lab/advance) and on `npm run routines:tick` in demos.
+  # Every output is internal (tasks/drafts/digests), simulated=true, audited. Nothing is sent externally.
+  - id: RT01
+    name: "Weekly persona digest"
+    cadence_days: 7
+    creates: "a one-page briefing per persona (top items under the Alert Budget, new opportunities, stalled approvals)"
+    owner_role: operations_manager
+  - id: RT02
+    name: "Visit-gap follow-up tasks"
+    cadence_days: 7
+    creates: "a task for the account manager when ER01/ER06 conditions hold and no open task exists for that account"
+    owner_role: account_manager
+  - id: RT03
+    name: "Chronic-therapy refill reminders"
+    cadence_days: 7
+    creates: "a WhatsApp-style/email DRAFT to the account when reorder_interval_drift is weakly adverse (below incident threshold)"
+    owner_role: account_manager
+  - id: RT04
+    name: "Stalled-approval nudge"
+    cadence_days: 1
+    creates: "a note to the approver role for plans waiting longer than 24 sim-hours (decision debt, A10)"
+    owner_role: operations_manager
+routine_gate: "e2e: approve routines once -> advance 7 sim-days -> at least one digest, one follow-up task, one refill draft and one nudge exist, all simulated=true, each with an audit row; zero external sends."

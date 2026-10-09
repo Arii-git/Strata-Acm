@@ -1,0 +1,109 @@
+/* =====================================================================
+   STRATA | contracts/design-tokens.css | v0.1
+   "Altygen Console" theme. This is the ONLY place colours/type/spacing live.
+   Re-skinning to match Altygen's real internal tools (once a mentor tells us
+   which ones they use) = edit THIS FILE ONLY. No hex values anywhere else.
+
+   Provenance of brand values: measured from computed styles on
+   altygenbiopharm.com (indigo rgb(33,23,86), crimson rgb(229,49,14),
+   body grey rgb(69,69,69), green rgb(42,178,0), font Poppins).
+   Everything else is a design decision, not a measurement.
+
+   Contrast: every text/background pair below was computed to >= 4.5:1 (WCAG AA). --crimson-600 is NEVER used for text (4.4:1 on white);
+   use --crimson-700/--sev-critical-fg for text. Re-verify after any change (qa lane runs a contrast test over this file).
+
+   Design principle: CRIMSON IS SCARCE. It means "this needs you now".
+   Indigo is structure. Green is healthy. Never use crimson decoratively.
+   ===================================================================== */
+
+:root {
+  /* ---- brand ---- */
+  --indigo-900: #160F3D;
+  --indigo-800: #211756;           /* brand indigo (measured) : sidebar, headers, primary buttons */
+  --indigo-700: #2E2275;
+  --indigo-600: #433893;
+  --indigo-200: #CFCBEA;
+  --indigo-100: #E7E5F5;
+  --indigo-50:  #F3F2FA;
+  --crimson-600: #E5310E;          /* brand crimson (measured) : critical severity, brand mark, active-nav rule */
+  --crimson-700: #BF2A0C;          /* crimson for TEXT on white (5.9:1) */
+  --crimson-100: #FDE6E1;
+  --green-600:  #2AB200;           /* brand green (measured) */
+  --green-700:  #176300;           /* green for TEXT (AA on green-100: 6.5:1) */
+  --green-100:  #E3F5DC;
+  --amber-600:  #8F5200;           /* elevated text (AA on amber-100: 5.5:1). Decorative amber fills may use a lighter tint in charts only */
+  --amber-100:  #FCEFD6;
+  --sky-600:    #185A99;           /* info / watch (AA on sky-100: 6.0:1) */
+  --sky-100:    #E2EEF8;
+
+  /* ---- neutrals (indigo-tinted so the UI feels like one object) ---- */
+  --canvas:     #F6F6FA;
+  --surface:    #FFFFFF;
+  --surface-2:  #FAFAFD;
+  --line:       #E4E3EE;
+  --line-strong:#CFCDE0;
+  --ink:        #1B1740;           /* primary text */
+  --ink-2:      #454368;           /* secondary text */
+  --ink-3:      #625F7E;           /* tertiary / "light-font" explanations (5.6:1 on --canvas, 5.9:1 on white) */
+  --ink-inverse:#FFFFFF;
+
+  /* ---- semantic severity (always paired with a text label AND a shape/dot, never colour alone) ---- */
+  --sev-healthy-fg:  var(--green-700);  --sev-healthy-bg:  var(--green-100);
+  --sev-watch-fg:    var(--sky-600);    --sev-watch-bg:    var(--sky-100);
+  --sev-elevated-fg: var(--amber-600);  --sev-elevated-bg: var(--amber-100);
+  --sev-high-fg:     #7A4200;           --sev-high-bg:     #F9E1BC;  /* 6.3:1 */
+  --sev-critical-fg: #B02508;           --sev-critical-bg: var(--crimson-100);  /* 5.6:1 */
+
+  /* ---- type ---- */
+  --font-brand: "Poppins", system-ui, sans-serif;          /* headings, nav, brand, buttons */
+  --font-ui:    "IBM Plex Sans", system-ui, sans-serif;     /* body, tables, forms (denser, tabular-friendly) */
+  --font-mono:  "IBM Plex Mono", ui-monospace, monospace;   /* IDs, timestamps, numbers in tables */
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px;
+  --fs-20: 20px; --fs-24: 24px; --fs-32: 32px; --fs-44: 44px;
+  --lh-tight: 1.25; --lh-body: 1.5;
+  --tnum: "tnum" 1, "lnum" 1;      /* font-feature-settings for every number */
+
+  /* ---- space / shape ---- */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+  --r-sm: 4px; --r-md: 6px; --r-lg: 8px;         /* squared enterprise corners; nothing above 8px except pills */
+  --r-pill: 999px;
+  --row-h: 36px; --row-h-compact: 28px; --control-h: 32px;
+  --sidebar-w: 248px; --sidebar-w-collapsed: 56px; --topbar-h: 48px;
+  --content-max: 1360px;
+
+  /* ---- elevation: borders first, shadows almost never ---- */
+  --shadow-pop: 0 4px 16px rgba(22,15,61,.14);   /* menus/popovers only */
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--indigo-600);
+
+  /* ---- motion: quick, linear-feeling, no bounce ---- */
+  --t-fast: 120ms; --t-base: 160ms; --t-panel: 220ms;
+  --ease: cubic-bezier(.2,.0,.0,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-fast: 0ms; --t-base: 0ms; --t-panel: 0ms; }
+}
+
+/* ---- charts (ECharts theme reads these) ---- */
+:root {
+  --chart-1: var(--indigo-700);
+  --chart-2: var(--crimson-600);   /* only for the adverse series */
+  --chart-3: var(--sky-600);
+  --chart-4: var(--amber-600);
+  --chart-5: var(--green-600);
+  --chart-grid: var(--line);
+  --chart-axis: var(--ink-3);
+  /* Chart rules: max 3 series per chart; direct labels over legends; baseline always drawn as a dashed grey line;
+     every chart sits in <ChartFrame> which REQUIRES `meaning` + `implication` captions (see AGENTS.md). */
+}
+
+/* ---- component contracts (names the lanes must share) ---- */
+/* .btn            32px, 6px radius, Poppins 500 13px
+   .btn--primary   indigo-800 fill, white text; hover indigo-700
+   .btn--secondary white fill, 1px line-strong, ink text
+   .btn--ghost     transparent, ink-2
+   .btn--danger    white fill, crimson-700 text + 1px crimson border   (Reject)
+   .pill           22px high, dot + label, bg from --sev-*-bg, fg from --sev-*-fg
+   .caption        12px, --ink-3, weight 400, max-width 62ch — THE under-every-number explanation
+   .nav-section    11px Poppins 600 uppercase letter-spacing .08em, indigo-200 on sidebar
+   .nav-item       36px, 3px left rule = crimson-600 when active (the one deliberate crimson accent in chrome) */
