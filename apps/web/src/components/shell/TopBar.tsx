@@ -6,6 +6,7 @@ import { useApi } from "@/lib/api/client";
 import type { Health, PersonaKey } from "@/lib/api/types";
 import { fmtDate } from "@/lib/format";
 import { PERSONAS, usePersona } from "@/lib/persona";
+import { useViewMode } from "@/lib/viewmode";
 import { activeItem } from "./nav";
 
 export function SyntheticBadge() {
@@ -41,6 +42,16 @@ export function PersonaSwitcher() {
   );
 }
 
+export function ViewModeToggle() {
+  const { mode, setMode } = useViewMode();
+  return (
+    <div className="seg" role="group" aria-label="Detail level">
+      <button type="button" className={`seg__btn${mode === "simple" ? " is-on" : ""}`} aria-pressed={mode === "simple"} onClick={() => setMode("simple")} title="Hide reviewer pages and collapse detail panels">Simple</button>
+      <button type="button" className={`seg__btn${mode === "detailed" ? " is-on" : ""}`} aria-pressed={mode === "detailed"} onClick={() => setMode("detailed")} title="Show every page and open detail panels">Detailed</button>
+    </div>
+  );
+}
+
 export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const pathname = usePathname() ?? "/app";
   const item = activeItem(pathname);
@@ -65,6 +76,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         <IconSearch size={14} stroke={1.5} aria-hidden="true" />
         <span className="kbd">Ctrl K</span>
       </button>
+      <ViewModeToggle />
       <SyntheticBadge />
       <ModeChip health={health} error={error} />
       <SimClock simNow={health?.sim_now} />

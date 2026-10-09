@@ -1,0 +1,3 @@
+# Review feedback 1 (Arihant, verbatim)
+
+"The dashboard looks incredibly messy and numbers and stuff keep floating around. There is no proper flow. The UI needs to be more user friendly. Problems should be classified properly. After the landing page don't just show the news — only if I click on the button I need it. Everything needs to be accessible, and we need more diagrams and images in the project to visually represent and classify each action properly. All events are pretty random. A proper workflow is needed, and proper explanations of each thing inside the project: what do the numbers mean, what can be expected after the result is taken."

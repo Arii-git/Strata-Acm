@@ -22,6 +22,7 @@ from .config import (ENGAGEMENT, ENGINE_VERSION, FEATURES, LLM_PROVIDER, MODE, R
                      STORE, STORE_DIR, CATALOG)
 from .detect import SEV_ORDER, Detection, Incident, evaluate
 from .signals import LABELS, D0, WEEKS, roll4, week_start
+from .taxonomy import CATEGORY_LABEL, STAGE_LABEL, category_of, stage_of
 
 app = FastAPI(title="STRATA engine", version=ENGINE_VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -197,7 +198,21 @@ def summary(inc: Incident) -> dict[str, Any]:
             "status": st.get("status", "detected"), "cause": st.get("cause", "not_investigated"),
             "cause_confidence": st.get("cause_confidence"), "driver": inc.driver, "regulatory_sensitive": inc.regulatory_sensitive,
             "owner_role": inc.owner_role, "age_days": (D0 - datetime.fromisoformat(inc.onset).date()).days if inc.onset else None,
-            "rank_score": round(rank, 2), "sim_run_id": inc.sim_run_id}
+            "rank_score": round(rank, 2), "sim_run_id": inc.sim_run_id, **classify(inc, st)}
+
+
+def classify(inc: Incident, st: dict[str, Any]) -> dict[str, Any]:
+    """Descriptive category + workflow stage (config/taxonomy.ts mirrors this)."""
+    cause = st.get("cause")
+    if not cause or cause == "not_investigated":
+        from .agents import cause_candidates
+        cause = cause_candidates(inc)[0].cause  # same deterministic rules the Investigator uses; descriptive only
+    cat = category_of(inc.kind, inc.regulatory_sensitive, cause if cause != "unknown" else None, inc.driver)
+    plan = state.get("plans", st["plan_id"]) if st.get("plan_id") else None
+    has_out = any(o["incident_id"] == inc.ref for o in state.all_("outcomes"))
+    learned = state.get("memory_added", f"OUT-{inc.ref}") is not None
+    stg = stage_of(st, plan, has_out, learned)
+    return {"category": cat, "category_label": CATEGORY_LABEL[cat], "stage": stg, "stage_label": STAGE_LABEL[stg]}
 
 
 def visible_to(inc: Incident, persona: str) -> bool:
@@ -962,3 +977,121 @@ def notebook_add(body: NotebookIn) -> dict[str, Any]:
 
 SEV_ORDER  # noqa: B018
 week_start  # noqa: B018
+
+
+# ------------------------------------------------------------------ events (one classified event list over the audit log)
+EVENT_TYPES: dict[str, dict[str, str]] = {
+    "detected": {"label": "Detected", "icon": "radar", "template": "Sentinel flagged {title}"},
+    "investigation_started": {"label": "Investigation started", "icon": "search", "template": "Investigation started"},
+    "cause_ranked": {"label": "Cause ranked", "icon": "list-check", "template": "{summary}"},
+    "memory_matched": {"label": "Memory matched", "icon": "books", "template": "{summary}"},
+    "plan_drafted": {"label": "Plan drafted", "icon": "clipboard-list", "template": "Plan {entity} drafted; needs {role}"},
+    "approved": {"label": "Approved", "icon": "circle-check", "template": "{actor} approved plan {entity}"},
+    "modified": {"label": "Modified", "icon": "edit", "template": "{actor} modified plan {entity}: {reason}"},
+    "rejected": {"label": "Rejected", "icon": "circle-x", "template": "{actor} rejected plan {entity}: {reason}"},
+    "plan_superseded": {"label": "Plan superseded", "icon": "replace", "template": "Plan {entity} replaced by a newer investigation"},
+    "task_created": {"label": "Task created", "icon": "checkbox", "template": "{what} created (simulated, nothing sent)"},
+    "task_completed": {"label": "Task completed", "icon": "check", "template": "{actor} completed task {entity}"},
+    "outcome_recorded": {"label": "Outcome recorded", "icon": "target-arrow", "template": "Outcome recorded after {days} simulated days (illustrative)"},
+    "memory_updated": {"label": "Memory updated", "icon": "database", "template": "Memory item {entity} written by the learning loop"},
+    "data_health_notice": {"label": "Data-health notice", "icon": "plug-connected-x", "template": "Data Health Guard: {what}"},
+    "note_posted": {"label": "Note posted", "icon": "message", "template": "{actor} posted a note{to}"},
+    "routine_ran": {"label": "Routine ran", "icon": "repeat", "template": "Standing routine {entity} ran ({n} outputs, simulated)"},
+}
+# index into taxonomy STAGES for events that move a case forward
+STAGE_OF_EVENT = {"detected": 0, "investigation_started": 1, "cause_ranked": 1, "memory_matched": 1, "plan_drafted": 3,
+                  "plan_superseded": 2, "approved": 4, "modified": 4, "rejected": 2, "task_created": 4, "task_completed": 4,
+                  "outcome_recorded": 5, "memory_updated": 6}
+
+
+def build_events() -> list[dict[str, Any]]:
+    rows = state.audit_rows()
+    plan_inc = {p["id"]: p["incident_id"] for p in state.all_("plans")}
+    task_inc = {t["id"]: t.get("incident_id") for t in state.all_("tasks")}
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        a, d, eid = r["action"], r["detail"] or {}, r["entity_id"]
+        inc = None
+        etype = None
+        fields: dict[str, Any] = {"entity": eid, "actor": r["actor"]}
+        if a == "incident.detected":
+            etype, inc = "detected", eid
+            i = E().by_ref.get(eid)
+            fields["title"] = f"{eid}: {i.title}" if i else eid
+        elif a == "agent.step":
+            inc = eid
+            agent = r["actor"]
+            if agent == "sentinel":
+                etype = "investigation_started"
+            elif agent in ("investigator", "memory"):
+                etype = "cause_ranked" if agent == "investigator" else "memory_matched"
+                fields["summary"] = d.get("summary", "")
+        elif a == "plan.proposed":
+            etype, inc = "plan_drafted", d.get("incident")
+            fields["role"] = ROLE_LABELS.get(d.get("requires_role", ""), d.get("requires_role", ""))
+        elif a in ("plan.approved", "plan.modified", "plan.rejected"):
+            etype, inc = a.split(".")[1], d.get("incident")
+            fields["reason"] = d.get("reason") or ""
+        elif a == "plan.superseded":
+            etype, inc = "plan_superseded", d.get("incident")
+        elif a in ("task.created", "draft.created"):
+            etype = "task_created"
+            inc = plan_inc.get(d.get("plan", "")) or task_inc.get(eid)
+            fields["what"] = ("Message draft " if a == "draft.created" else "Task ") + eid
+        elif a == "task.status" and d.get("status") == "done":
+            etype, inc = "task_completed", task_inc.get(eid)
+        elif a == "outcome.recorded":
+            etype, inc = "outcome_recorded", eid
+            fields["days"] = d.get("days", "")
+        elif a == "memory.written":
+            etype = "memory_updated"
+            inc = eid[4:] if eid.startswith("OUT-") else None
+        elif a == "lab.inject" and r["entity_type"] == "feed":
+            etype = "data_health_notice"
+            fields["what"] = "orders feed stale with duplicate rows; order signals paused"
+        elif a == "note.posted":
+            etype, inc = "note_posted", d.get("incident")
+            m = d.get("mentions") or []
+            fields["to"] = (" to " + ", ".join(ROLE_LABELS.get(x, x) for x in m)) if m else ""
+        elif a == "routine.ran":
+            etype = "routine_ran"
+            fields["n"] = len(d.get("outputs", []))
+        if not etype:
+            continue
+        meta = EVENT_TYPES[etype]
+        try:
+            text = meta["template"].format(**fields)
+        except KeyError:
+            text = meta["label"]
+        link = f"/app/incidents/{inc}" if inc else {"routine_ran": "/app/workflows", "data_health_notice": "/app/sources",
+                                                   "task_created": "/app/workflows", "note_posted": "/app/workflows"}.get(etype)
+        out.append({"id": r["id"], "type": etype, "label": meta["label"], "icon": meta["icon"], "text": text,
+                    "at": r["at"], "wall_at": r["wall_at"], "incident": inc, "actor": r["actor"],
+                    "actor_type": r["actor_type"], "link": link, "stage_index": STAGE_OF_EVENT.get(etype)})
+    return out
+
+
+@app.get("/events")
+def events(incident: str | None = None, limit: int = 200) -> dict[str, Any]:
+    ev = build_events()
+    if incident:
+        ev = [e for e in ev if e["incident"] == incident]
+    ev.sort(key=lambda e: e["id"])  # audit order = causal order (the hash chain is append-only)
+    return {"items": ev[-limit:], "types": EVENT_TYPES}
+
+
+@app.get("/metrics/dictionary")
+def metrics_dictionary() -> dict[str, Any]:
+    import yaml as _yaml
+
+    from .config import ROOT
+    p = ROOT / "config" / "metrics.yaml"
+    items = _yaml.safe_load(p.read_text(encoding="utf-8")) if p.exists() else []
+    return {"items": items or []}
+
+
+@app.get("/taxonomy")
+def taxonomy() -> dict[str, Any]:
+    from .taxonomy import CATEGORIES, STAGES
+    return {"categories": [{"key": c, "label": CATEGORY_LABEL[c]} for c in CATEGORIES],
+            "stages": [{"key": s, "label": STAGE_LABEL[s]} for s in STAGES]}

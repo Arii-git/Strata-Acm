@@ -1,0 +1,22 @@
+/* =====================================================================
+   STRATA | contracts/design-tokens.v2.css | v0.2  (added after review 1; v1 stays frozen)
+   Imported AFTER design-tokens.css. Readability + ease-of-use overrides requested in
+   docs/REVIEW_FEEDBACK_1.md ("more user friendly", "accessible"). No new colours here:
+   every colour still comes from v1. Logged in docs/CONTRACT_CHANGES.md.
+
+   Note: the --fs-* names keep their v1 meaning as "size steps"; v2 raises the small steps so
+   base text is 16px and captions 14px everywhere without touching component code.
+   ===================================================================== */
+:root {
+  --fs-11: 13px;          /* micro labels (badges, mono tags) */
+  --fs-12: 14px;          /* captions, helper text  (>= 4.5:1 via --ink-3) */
+  --fs-13: 16px;          /* base text */
+  --fs-14: 17px;          /* card titles */
+  --fs-16: 18px;
+  --row-h: 48px;          /* table rows */
+  --row-h-compact: 36px;
+  --control-h: 44px;      /* minimum target size */
+  --content-max: 1280px;
+  --section-gap: 32px;    /* space between page sections */
+  --sp-8: 64px;
+}

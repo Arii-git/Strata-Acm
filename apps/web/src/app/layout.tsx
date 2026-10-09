@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "@/styles/tokens.css";
+import "@/styles/tokens-v2.css";
 import "@/styles/globals.css";
 
 const poppins = Poppins({ variable: "--nf-poppins", subsets: ["latin"], weight: ["500", "600"], display: "swap" });

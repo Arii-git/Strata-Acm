@@ -25,7 +25,7 @@ Source of truth, in this order: `docs/01_BLUEPRINT.md` → `contracts/*` (incl. 
 - Do **not** deploy, create cloud projects, or implement Google auth in the prototype. That is Phase 5, after the human review.
 
 ## 4. Design rules
-- All colours, fonts, spacing, radii, motion come from `contracts/design-tokens.css` (copied to `apps/web/src/styles/tokens.css`). No hex literals elsewhere (lint rule). Re-skinning must be a one-file change.
+- All colours, fonts, spacing, radii, motion come from `contracts/design-tokens.css` + `contracts/design-tokens.v2.css` (v2 = readability overrides, review 1) (copied to `apps/web/src/styles/tokens.css`). No hex literals elsewhere (lint rule). Re-skinning must be a one-file change.
 - Look: Altygen-branded enterprise console. Indigo sidebar, white surfaces on lavender-grey canvas, crimson only for "act now". 6 px corners, 1 px borders. **Forbidden:** gradients, glow, glassmorphism, emoji, sparkle/"AI" icons, rounded chat bubbles, purple-blue hero, default shadcn look, default Recharts look, stock images.
 - Every page: first line is the question it answers; max 6 primary widgets (a table or tile strip counts as one); every KPI/chart wrapped in `<Metric>` / `<ChartFrame>` (tables: `<DataTable provenance caption>`) which **require** `meaning` and `implication` (rendered as 12 px `--ink-3` caption) and `provenance` (tiny badge). TypeScript must fail to compile without them.
 - Status is never colour-only (dot + text + position). Contrast ≥ 4.5:1 for text — `design-tokens.css` is already verified; a qa-lane test recomputes every text/background pair and fails the build on regression. Never use `--crimson-600` for text. Full keyboard operation; visible focus ring; `prefers-reduced-motion` respected.

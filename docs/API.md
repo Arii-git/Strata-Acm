@@ -101,3 +101,9 @@ Task = {id, title, owner_role, due_at, status, channel, origin, account_id, inci
 `POST /lab/inject` body `{scenario:"S01"}` → `{incident_ref}`
 `GET /notebook` / `POST /notebook` body `{author, tried, happened, changed?, evidence?}` (POST rejects empty author/tried/happened)
 `GET /routines` / `POST /routines/{id}/approve` body `{persona, decided_by}`
+
+## Added in review 1 (UX revamp)
+- Every incident summary (`/incidents`, `/risks`, `/opportunities`, `/briefing` priorities, `/incidents/{id}`) gains `category` (supply|service|customer|finance|field|quality|data|opportunity), `category_label`, `stage` (detected|investigating|plan_ready|awaiting_approval|in_progress|outcome_recorded|learned), `stage_label`. Mapping: `services/engine/strata_engine/taxonomy.py` = `config/taxonomy.ts`.
+- `GET /events?incident=&limit=` -> `{items:[{id, type, label, icon, text, at, wall_at, incident, actor, actor_type, link, stage_index}], types}`: classified events built from the hash-chained audit log, in audit (causal) order. Unknown actions are not shown.
+- `GET /metrics/dictionary` -> `{items:[{id, name, unit, formula, good_direction, compare, implies, action, provenance}]}` from `config/metrics.yaml`.
+- `GET /taxonomy` -> `{categories:[{key,label}], stages:[{key,label}]}`.
