@@ -58,6 +58,8 @@ export function DataTable<T>({ columns, data, provenance, caption, onRowClick, e
     <div className="dt">
       <div className="dt__scroll" style={maxHeight ? { maxHeight } : undefined}>
         <table>
+          {/* screen-reader name for the table; the same text is shown visually under it */}
+          <caption className="sr-only">{caption}</caption>
           <thead>
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
@@ -71,11 +73,15 @@ export function DataTable<T>({ columns, data, provenance, caption, onRowClick, e
                       key={h.id}
                       className={meta?.numeric ? "is-num" : undefined}
                       title={meta?.help}
-                      aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined}
+                      scope="col"
+                      aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : canSort ? "none" : undefined}
                     >
                       {canSort ? (
                         <button type="button" onClick={h.column.getToggleSortingHandler()}>
                           {label}
+                          <span className="sr-only">
+                            {sorted === "asc" ? ", sorted ascending" : sorted === "desc" ? ", sorted descending" : ", not sorted"}. Activate to change sort.
+                          </span>
                           {sorted === "asc" ? <IconArrowUp size={12} aria-hidden="true" /> : sorted === "desc" ? <IconArrowDown size={12} aria-hidden="true" /> : <IconArrowsSort size={12} aria-hidden="true" style={{ opacity: 0.4 }} />}
                         </button>
                       ) : (
@@ -99,7 +105,7 @@ export function DataTable<T>({ columns, data, provenance, caption, onRowClick, e
                   className={onRowClick ? "is-clickable" : undefined}
                   tabIndex={onRowClick ? 0 : undefined}
                   onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                  onKeyDown={onRowClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(row.original); } } : undefined}
+                  onKeyDown={onRowClick ? (e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(row.original); } } : undefined}
                 >
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta;

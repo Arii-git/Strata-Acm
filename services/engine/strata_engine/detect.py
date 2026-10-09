@@ -53,6 +53,7 @@ class Incident:
     blast: list[dict[str, Any]] = field(default_factory=list)
     context: list[Sig] = field(default_factory=list)
     sim_run_id: str | None = None
+    persistence_bonus: bool = False
 
     @property
     def id(self) -> str:
@@ -239,7 +240,7 @@ def evaluate(t: dict[str, pd.DataFrame], ref_prefix: str = "INC-2026-") -> Detec
                                   account_id=aid, severity=band(sc), risk_score=sc, n_sources=n, sources=srcs,
                                   evidence=sorted(adv, key=lambda x: -x.p), value_at_stake=v12[aid], driver=driver,
                                   owner_role=DRIVER_OWNER.get(driver, "operations_manager"), onset=week_start(ow).isoformat(),
-                                  silent_period_days=silent, silent_basis=basis, blast=blast,
+                                  silent_period_days=silent, silent_basis=basis, blast=blast, persistence_bonus=persistent,
                                   context=[sg for sg in own if not sg.is_adverse and abs(sg.robust_z) < 1 and sg.signal_key in ("tickets",)]))
 
     # ---------------- regulatory-sensitive (always QA-routed) ----------------

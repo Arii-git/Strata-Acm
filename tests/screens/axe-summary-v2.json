@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-10-09T10:42:24.684Z",
+  "tags": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa",
+    "wcag22aa"
+  ],
+  "counts": {
+    "critical": 0,
+    "serious": 0,
+    "routes_checked": 46,
+    "routes_skipped": 0,
+    "routes_error": 0
+  },
+  "skipped": [],
+  "errors": [],
+  "violations": []
+}

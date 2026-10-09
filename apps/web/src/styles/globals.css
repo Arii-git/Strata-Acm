@@ -41,7 +41,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .caption { font-size: var(--fs-12); color: var(--ink-3); font-weight: 400; max-width: 62ch; line-height: var(--lh-body); }
 .prov {
   display: inline-flex; align-items: center; height: 16px; padding: 0 5px;
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: .02em; text-transform: lowercase;
+  font-family: var(--font-mono); font-size: var(--fs-11); letter-spacing: .02em; text-transform: lowercase;
   color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm);
   vertical-align: middle; white-space: nowrap;
 }
@@ -254,7 +254,7 @@ button.ev-chip:hover { border-color: var(--indigo-600); background: var(--indigo
 .landing__main { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 880px; width: 100%; margin: 0 auto; padding: var(--sp-7) var(--sp-5); gap: var(--sp-5); }
 .landing__brand { display: flex; align-items: center; gap: var(--sp-3); }
 .landing__brand .brand-mark { width: 16px; height: 16px; }
-.landing__wordmark { font-family: var(--font-brand); font-weight: 600; font-size: 72px; letter-spacing: .1em; color: var(--indigo-800); line-height: 1; }
+.landing__wordmark { font-family: var(--font-brand); font-weight: 600; font-size: clamp(var(--fs-44), 8vw, calc(var(--fs-44) * 1.64)); letter-spacing: .1em; color: var(--indigo-800); line-height: 1; }
 .landing__tagline { font-family: var(--font-brand); font-weight: 500; font-size: var(--fs-24); color: var(--ink); line-height: var(--lh-tight); }
 .landing__meta { display: flex; flex-direction: column; gap: var(--sp-1); color: var(--ink-2); font-size: var(--fs-14); }
 .landing__district { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }

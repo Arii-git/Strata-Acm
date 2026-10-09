@@ -1,42 +1,21 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, ChartFrame, DataTable, EChart, EmptyState, ProvenanceBadge, baselineMarkLine, type ColumnDef } from "@/components/ui";
+import { Card, DataTable, EmptyState, ProvenanceBadge, TermHint, type ColumnDef } from "@/components/ui";
 import { fmtINR, fmtNum, humanize } from "@/lib/format";
 import { fmtEvidenceValue, type BlastRow, type WbEvidence } from "./shared";
 
-function Sparkline({ e }: { e: WbEvidence }) {
-  const s = e.series!;
-  const option = useMemo(() => ({
-    grid: { left: 40, right: 12, top: 12, bottom: 22 },
-    xAxis: { type: "category" as const, data: s.labels, axisLabel: { show: true, interval: 6, fontSize: 10 } },
-    yAxis: { type: "value" as const, scale: true, splitNumber: 3, axisLabel: { fontSize: 10 } },
-    tooltip: { trigger: "axis" as const },
-    series: [{
-      type: "line" as const, data: s.values, showSymbol: false, smooth: false,
-      lineStyle: { width: 1.5, color: "var(--chart-1)" }, itemStyle: { color: "var(--chart-1)" },
-      markLine: baselineMarkLine(s.baseline, "Baseline"),
-    }],
-  }), [s]);
-  return (
-    <ChartFrame
-      title={`${e.label}, ${s.values.length} weeks`}
-      meaning={`Weekly ${e.label.toLowerCase()} for ${e.scope_key ?? e.scope}; dashed line is its own baseline.`}
-      implication="The recent weeks falling away from the dashed line is the shift the detector scored."
-      provenance="synthetic"
-      height={130}
-    >
-      <EChart option={option} ariaLabel={`${e.label} weekly series vs baseline`} />
-    </ChartFrame>
-  );
-}
-
 export function EvidenceTab({ evidence, blast, highlight }: { evidence: WbEvidence[]; blast: BlastRow[]; highlight: string | null }) {
+  // The list is collapsed by default (it is long); an evidence chip elsewhere opens it and scrolls to the item.
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!highlight) return;
-    const el = document.getElementById(`ev-${highlight}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setOpen(true);
+    const t = window.setTimeout(() => {
+      document.getElementById(`ev-${highlight}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+    return () => window.clearTimeout(t);
   }, [highlight]);
 
   const blastCols = useMemo<ColumnDef<BlastRow>[]>(() => [
@@ -52,6 +31,10 @@ export function EvidenceTab({ evidence, blast, highlight }: { evidence: WbEviden
 
   return (
     <div className="stack">
+      <details className="details" open={open} onToggle={(ev) => setOpen((ev.currentTarget as HTMLDetailsElement).open)} data-testid="evidence-list">
+        <summary className="details__summary">Evidence list: all {evidence.length} signals with values, definitions and IDs</summary>
+        <div className="details__body">
+      <p className="caption" style={{ margin: 0 }}>Each item has an <TermHint term="evidence_id" label="evidence ID" />; sentences on the Why tab cite these IDs.</p>
       {evidence.map((e) => {
         const v = fmtEvidenceValue(e);
         const hl = highlight === e.id;
@@ -66,7 +49,7 @@ export function EvidenceTab({ evidence, blast, highlight }: { evidence: WbEviden
               opacity: e.role === "context" ? 0.92 : 1,
             }}
           >
-            <div className="grid grid--2" style={{ alignItems: "start" }}>
+            <div>
               <div className="stack" style={{ gap: "var(--sp-2)" }}>
                 <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
                   <div className="row" style={{ flexWrap: "wrap" }}>
@@ -82,7 +65,7 @@ export function EvidenceTab({ evidence, blast, highlight }: { evidence: WbEviden
                   <span className="muted num">{v.detail}</span>
                 </div>
                 <div className="row caption" style={{ gap: "var(--sp-3)", flexWrap: "wrap" }}>
-                  <span>robust z <span className="mono">{fmtNum(e.robust_z, 2)}</span></span>
+                  <span>robust z <span className="mono">{fmtNum(e.robust_z, 2)}</span> <TermHint term="robust_z" /></span>
                   <span>direction <strong>{e.direction}</strong></span>
                   <span>scope {humanize(e.scope)}{e.scope_key ? ` ${e.scope_key}` : ""}</span>
                 </div>
@@ -90,12 +73,13 @@ export function EvidenceTab({ evidence, blast, highlight }: { evidence: WbEviden
                 {e.note ? <p className="caption muted" style={{ margin: 0 }}>{e.note}</p> : null}
                 {e.definition ? <p className="caption muted mono" style={{ margin: 0 }}>{e.definition}</p> : null}
               </div>
-              <div>{e.series ? <Sparkline e={e} /> : <p className="caption muted">No weekly series for this signal.</p>}</div>
             </div>
           </section>
         );
       })}
-      <Card title="Blast radius">
+        </div>
+      </details>
+      <Card title="Blast radius: other accounts exposed">
         {blast.length ? (
           <DataTable
             columns={blastCols}

@@ -6,8 +6,9 @@ import { apiPost } from "@/lib/api/client";
 import { usePersona, personaLabel } from "@/lib/persona";
 import { Button } from "@/components/ui";
 import { inputStyle, labelStyle, type WbPlan } from "./shared";
+import type { DecisionOutcome } from "./DecisionResult";
 
-export function ApprovalBar({ plan, onDecided }: { plan: WbPlan; onDecided: (message: string) => void }) {
+export function ApprovalBar({ plan, onDecided }: { plan: WbPlan; onDecided: (outcome: DecisionOutcome) => void }) {
   const { persona, label } = usePersona();
   const [name, setName] = useState(label);
   const [mode, setMode] = useState<Decision | null>(null);
@@ -27,7 +28,7 @@ export function ApprovalBar({ plan, onDecided }: { plan: WbPlan; onDecided: (mes
       setMsg({ ok: true, text: r.message });
       setMode(null);
       setReason("");
-      onDecided(r.message);
+      onDecided({ decision, planId: plan.id, response: r });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -41,6 +42,7 @@ export function ApprovalBar({ plan, onDecided }: { plan: WbPlan; onDecided: (mes
     <div
       role="region"
       aria-label="Plan decision"
+      data-testid="approval-bar"
       style={{
         position: "sticky", bottom: 0, zIndex: 5, marginTop: "var(--sp-4)",
         background: "var(--surface)", borderTop: "1px solid var(--line-strong)", boxShadow: "var(--shadow-pop)",

@@ -4,9 +4,12 @@ import { useMemo, useState } from "react";
 import type { Note } from "@/lib/api/types";
 import { apiPost } from "@/lib/api/client";
 import { usePersona, personaLabel } from "@/lib/persona";
-import { Button, Card, DataTable, EmptyState, Metric, ProvenanceBadge, StatusPill, type ColumnDef } from "@/components/ui";
-import { fmtDate, fmtINR, fmtNum, fmtPct, humanize } from "@/lib/format";
-import { Chips, inputStyle, labelStyle, type PlanApproval, type WbDraft, type WbIncident, type WbOutcome, type WbPlanStep, type WbTask } from "./shared";
+import { Button, Card, DataTable, EmptyState, ProvenanceBadge, StatusPill, TermHint, type ColumnDef } from "@/components/ui";
+import { fmtDate, fmtPct, humanize } from "@/lib/format";
+import { Chips, fmtHours, inputStyle, labelStyle, type PlanApproval, type WbDraft, type WbIncident, type WbOutcome, type WbTask } from "./shared";
+import { ApprovalBar } from "./ApprovalBar";
+import { ConsequencePanel } from "./ConsequencePanel";
+import { DecisionResult, type DecisionOutcome } from "./DecisionResult";
 
 export function DraftCard({ draft, onChip }: { draft: WbDraft; onChip: (id: string) => void }) {
   const kind = draft.channel === "whatsapp_draft" ? "WhatsApp draft" : "Email draft";
@@ -76,16 +79,13 @@ function NotesPanel({ incident, onChanged }: { incident: WbIncident; onChanged: 
   );
 }
 
-export function PlanTab({ incident, onChanged, onChip }: { incident: WbIncident; onChanged: () => void; onChip: (id: string) => void }) {
+export function PlanTab({
+  incident, onChanged, onChip, decision, onDecided, onGoWhy,
+}: {
+  incident: WbIncident; onChanged: () => void; onChip: (id: string) => void;
+  decision: DecisionOutcome | null; onDecided: (o: DecisionOutcome) => void; onGoWhy: () => void;
+}) {
   const plan = incident.plan;
-  const stepCols = useMemo<ColumnDef<WbPlanStep>[]>(() => [
-    { id: "n", header: "#", accessorKey: "n", meta: { numeric: true } },
-    { id: "action", header: "Action", accessorKey: "action" },
-    { id: "owner_role", header: "Owner", accessorKey: "owner_role", cell: (c) => personaLabel(c.row.original.owner_role) },
-    { id: "due_in_hours", header: "Due in", accessorKey: "due_in_hours", meta: { numeric: true }, cell: (c) => `${fmtNum(c.row.original.due_in_hours)} h` },
-    { id: "evidence", header: "Evidence", enableSorting: false, cell: (c) => <Chips ids={c.row.original.evidence_ids} onChip={onChip} /> },
-    { id: "source", header: "Source", accessorKey: "source", meta: { mono: true } },
-  ], [onChip]);
   const taskCols = useMemo<ColumnDef<WbTask>[]>(() => [
     { id: "id", header: "Task", accessorKey: "id" },
     { id: "title", header: "Title", accessorKey: "title" },
@@ -105,38 +105,66 @@ export function PlanTab({ incident, onChanged, onChip }: { incident: WbIncident;
 
   if (!plan) {
     return (
-      <div className="stack">
-        <EmptyState title="No plan yet" body="The Orchestrator drafts a plan once the investigation has run. Open the Agent trace tab and run it." />
+      <div className="stack case-tab">
+        <EmptyState
+          title="No plan yet"
+          body="A plan with owners and due times is drafted when the investigation runs."
+          action={<Button variant="primary" onClick={onGoWhy}>Go to: Why and what we did last time</Button>}
+        />
         <NotesPanel incident={incident} onChanged={onChanged} />
       </div>
     );
   }
 
   const approvals = (plan.approvals ?? (incident.approvals as PlanApproval[]).filter((a) => "decided_by" in a)) as PlanApproval[];
+  const awaiting = plan.status === "awaiting_approval";
+  const origin = [plan.sop_ref, plan.memory_ref].filter(Boolean).join(" and ") || "agent templates";
 
   return (
-    <div className="stack">
-      <div className="grid grid--4">
-        <Metric label="Plan status" value={humanize(plan.status)} meaning={`Plan ${plan.id}, version ${plan.version}.`} implication={plan.status === "awaiting_approval" ? "Nothing executes until a human approves." : "Decision recorded in the audit trail."} provenance="computed" />
-        <Metric label="Requires" value={personaLabel(plan.requires_role)} meaning={plan.four_eyes ? "Four-eyes: two different named approvers needed." : "One approver with this role."} implication="Other personas cannot approve; the engine enforces the role." provenance="computed" />
-        <Metric label="Value at stake" value={fmtINR(plan.value_at_stake)} meaning="Baseline 12-week order value of the affected scope." implication="This is exposure, not predicted loss." provenance="computed" />
-        <Metric label="Steps" value={fmtNum(plan.steps.length)} meaning={`From ${[plan.sop_ref, plan.memory_ref].filter(Boolean).join(" and ") || "agent templates"}.`} implication="Each step cites the evidence it acts on." provenance="computed" />
-      </div>
-      <Card title="Plan steps" actions={<span className="caption">Expected outcome: {plan.expected_outcome}</span>}>
-        <DataTable
-          columns={stepCols}
-          data={plan.steps}
-          provenance="computed"
-          caption="What it is: the ordered steps the Orchestrator assembled from the matching SOP and the most similar past incident. What it implies: on approval each step becomes a simulated task for its owner role, due in the stated hours."
-          initialSort={[{ id: "n", desc: false }]}
-        />
-      </Card>
+    <div className="stack case-tab">
+      {decision && decision.planId === plan.id ? <DecisionResult result={decision} incident={incident} /> : null}
+
+      <section className="case-section" aria-labelledby="sec-plan">
+        <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
+          <h3 id="sec-plan" className="case-section__title">Plan {plan.id} (version {plan.version})</h3>
+          <StatusPill status={plan.status} label={humanize(plan.status)} />
+        </div>
+        <p style={{ margin: 0 }}><b>Goal:</b> {plan.expected_outcome}</p>
+        <p className="caption" style={{ margin: 0 }}>
+          Built from {origin}. Decided by {personaLabel(plan.requires_role)}{plan.four_eyes ? <> with <TermHint term="four_eyes" label="four-eyes" /> (two different named approvers)</> : ""}.
+          Each step cites the evidence it acts on; on approval it becomes a simulated task for its owner.
+        </p>
+        <ol className="plan-steps" aria-label="Plan steps">
+          {plan.steps.map((s) => (
+            <li key={s.n} className="plan-steps__item">
+              <span className="plan-steps__n" aria-hidden="true">{s.n}</span>
+              <div className="stack" style={{ gap: "var(--sp-1)" }}>
+                <span>{s.action}</span>
+                <span className="caption">
+                  Owner: <b>{personaLabel(s.owner_role)}</b> · due in <b>{fmtHours(s.due_in_hours)}</b> after approval · from <span className="mono">{s.source}</span>
+                </span>
+                <Chips ids={s.evidence_ids} onChip={onChip} />
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       {plan.drafts.length ? (
-        <Card title="Drafts" provenance="illustrative">
+        <section className="case-section" aria-labelledby="sec-drafts">
+          <h3 id="sec-drafts" className="case-section__title">Message drafts (simulated, not sent)</h3>
           <div className="grid grid--2">{plan.drafts.map((d, i) => <DraftCard key={i} draft={d} onChip={onChip} />)}</div>
-        </Card>
+        </section>
       ) : null}
-      <Card title="Approvals so far">
+
+      {awaiting ? (
+        <>
+          <ConsequencePanel incident={incident} plan={plan} />
+          <ApprovalBar plan={plan} onDecided={onDecided} />
+        </>
+      ) : null}
+
+      <Card title="Decisions so far">
         {approvals.length ? (
           <ul style={{ margin: 0, paddingLeft: "var(--sp-4)" }}>
             {approvals.map((a) => (
@@ -150,7 +178,7 @@ export function PlanTab({ incident, onChanged, onChip }: { incident: WbIncident;
       </Card>
       {incident.tasks.length ? (
         <Card title="Tasks created">
-          <DataTable columns={taskCols} data={incident.tasks} provenance="synthetic" caption="What it is: simulated tasks created when the plan was approved. What it implies: each owner role now has a dated item; nothing was sent externally." />
+          <DataTable columns={taskCols} data={incident.tasks} provenance="synthetic" caption="What it is: simulated tasks and drafts created when the plan was approved. What it implies: each owner role now has a dated item in Workflows; nothing was sent externally." />
         </Card>
       ) : null}
       {incident.outcomes.length ? (

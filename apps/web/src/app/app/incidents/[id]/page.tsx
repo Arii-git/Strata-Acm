@@ -1,102 +1,190 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useApi } from "@/lib/api/client";
-import { Card, ErrorState, Loading, Metric, PageHeader, SeverityPill, StatusPill, Tabs, buttonClass } from "@/components/ui";
+import {
+  Button, CategoryChip, ErrorState, Loading, Metric, MetricGroup, PageTemplate, SeverityPill, StageTracker, Tabs, TermHint, buttonClass,
+} from "@/components/ui";
 import { fmtDate, fmtINR, fmtNum, humanize } from "@/lib/format";
 import { personaLabel } from "@/lib/persona";
+import { STAGES, STAGE_INDEX, type StageKey } from "@config/taxonomy";
 import type { WbIncident } from "@/components/features/workbench/shared";
-import { EvidenceTab } from "@/components/features/workbench/EvidenceTab";
-import { CausalMap } from "@/components/features/workbench/CausalMap";
-import { AgentTrace } from "@/components/features/workbench/AgentTrace";
-import { MemoryTab } from "@/components/features/workbench/MemoryTab";
+import { WhatHappenedTab } from "@/components/features/workbench/WhatHappenedTab";
+import { WhyTab } from "@/components/features/workbench/WhyTab";
 import { PlanTab } from "@/components/features/workbench/PlanTab";
-import { ApprovalBar } from "@/components/features/workbench/ApprovalBar";
+import type { DecisionOutcome } from "@/components/features/workbench/DecisionResult";
+import { CaseTimeline } from "@/components/features/events/CaseTimeline";
+import { stageTimestamps, useEvents } from "@/components/features/events/useEvents";
 
-const TAB_IDS = ["evidence", "map", "trace", "memory", "plan"];
+type TabId = "happened" | "why" | "todo";
+const TAB_IDS: TabId[] = ["happened", "why", "todo"];
+/** Old deep links (?tab=evidence|map|trace|memory|plan) keep working. */
+const LEGACY: Record<string, TabId> = { evidence: "happened", map: "why", trace: "why", memory: "why", plan: "todo" };
 
-export default function IncidentDetailPage() {
+function readTab(): TabId | null {
+  const t = new URLSearchParams(window.location.search).get("tab");
+  if (!t) return null;
+  if ((TAB_IDS as string[]).includes(t)) return t as TabId;
+  return LEGACY[t] ?? null;
+}
+
+/** Which tab the next workflow step lives on, per stage. */
+const NEXT_TAB: Record<StageKey, { tab: TabId; label: string }> = {
+  detected: { tab: "why", label: "Run the investigation" },
+  investigating: { tab: "why", label: "See the investigation" },
+  plan_ready: { tab: "why", label: "Re-run the investigation" },
+  awaiting_approval: { tab: "todo", label: "Review and decide on the plan" },
+  in_progress: { tab: "todo", label: "See the tasks created" },
+  outcome_recorded: { tab: "todo", label: "See the outcome" },
+  learned: { tab: "why", label: "See what memory holds" },
+};
+
+/** Suspense boundary: useSearchParams needs one so ?tab= changes (e.g. from the guided path) switch tabs live. */
+export default function CaseFilePage() {
+  return (
+    <Suspense fallback={null}>
+      <CaseFile />
+    </Suspense>
+  );
+}
+
+function CaseFile() {
   const params = useParams<{ id: string }>();
   const id = decodeURIComponent(String(params.id ?? ""));
   const { data, error, loading, reload } = useApi<WbIncident>(id ? `/incidents/${encodeURIComponent(id)}` : null);
-  const [tab, setTab] = useState("evidence");
+  const events = useEvents(id || null);
+  const reloadEvents = events.reload;
+  const [tab, setTabState] = useState<TabId>("happened");
   const [highlight, setHighlight] = useState<string | null>(null);
-  const [decisionMsg, setDecisionMsg] = useState<string | null>(null);
+  const [decision, setDecision] = useState<DecisionOutcome | null>(null);
 
+  const searchTab = useSearchParams().get("tab");
   useEffect(() => {
-    // Deep link: /app/incidents/{id}?tab=plan (read on the client; avoids a Suspense boundary for useSearchParams).
-    const t = new URLSearchParams(window.location.search).get("tab");
-    if (t && TAB_IDS.includes(t)) setTab(t);
-  }, [id]);
+    // Deep link: /app/incidents/{id}?tab=happened|why|todo; re-runs when the query changes on the same page.
+    const t = readTab();
+    if (t) setTabState(t);
+  }, [id, searchTab]);
+
+  const setTab = useCallback((t: TabId) => {
+    setTabState(t);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", t);
+      window.history.replaceState(window.history.state, "", url.toString());
+    } catch { /* history unavailable */ }
+  }, []);
+
+  const reloadAll = useCallback(() => { reload(); reloadEvents(); }, [reload, reloadEvents]);
 
   const onChip = useCallback((evId: string) => {
     setHighlight(evId);
-    setTab("evidence");
-  }, []);
+    setTab("happened");
+  }, [setTab]);
 
-  if (loading && !data) return <div className="stack"><PageHeader question="What is happening, why, what did we do last time, what should we do?" title="Incident Workbench" /><Loading rows={10} /></div>;
-  if (error && !data) return <div className="stack"><PageHeader question="What is happening, why, what did we do last time, what should we do?" title="Incident Workbench" /><ErrorState error={error} onRetry={reload} /></div>;
+  const onDecided = useCallback((o: DecisionOutcome) => {
+    setDecision(o);
+    reloadAll();
+  }, [reloadAll]);
+
+  const header = { explainKey: "case", title: "Case file", question: "What happened, why, and what should we do?" };
+  if (loading && !data) return <PageTemplate {...header}><Loading rows={10} label="Loading the case" /></PageTemplate>;
+  if (error && !data) return <PageTemplate {...header}><ErrorState error={error} onRetry={reload} title="Could not load this case" /></PageTemplate>;
   if (!data) return null;
 
   const inc = data;
-  const plan = inc.plan;
-  const awaiting = plan?.status === "awaiting_approval";
+  const stageKey = (inc.stage in STAGE_INDEX ? inc.stage : "detected") as StageKey;
+  const stageDef = STAGES[STAGE_INDEX[stageKey]];
+  const next = NEXT_TAB[stageKey];
   const critical = inc.severity === "critical";
+  const awaiting = inc.plan?.status === "awaiting_approval";
 
-  return (
-    <div className="stack">
-      <PageHeader question="What is happening, why, what did we do last time, what should we do?" title="Incident Workbench">
-        <Link href="/app/incidents" className={buttonClass("ghost", "sm")}>All incidents</Link>
-      </PageHeader>
+  const glance = (
+    <>
+      <div className="case-meta" data-testid="case-meta">
+        <span className="mono case-meta__ref">{inc.ref}</span>
+        <CategoryChip category={inc.category} />
+        <SeverityPill severity={inc.severity} />
+        <span className="case-meta__owner">Owner: <b>{personaLabel(inc.owner_role)}</b></span>
+        {inc.account_id != null ? <Link href={`/app/accounts/${inc.account_id}`} className="case-meta__link">Open account</Link> : null}
+        <span className="caption">Scope: {humanize(inc.scope)}{inc.region ? ` · ${inc.region}` : ""}</span>
+      </div>
 
-      <Card>
-        <div className="row" style={{ flexWrap: "wrap", gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
-          <span className="mono" style={{ fontSize: "var(--fs-13)" }}>{inc.ref}</span>
-          <SeverityPill severity={inc.severity} />
-          <StatusPill status={inc.status} />
-          <span className="chip">{humanize(inc.kind)}</span>
-          <span className="caption">Owner: {personaLabel(inc.owner_role)}</span>
-          {inc.account_id != null ? <Link href={`/app/accounts/${inc.account_id}`} className="caption">Open account</Link> : null}
+      <section className="case-stage" aria-label="Where this case is in the workflow">
+        <StageTracker stage={stageKey} timestamps={stageTimestamps(events.data?.items)} />
+        <div className="case-stage__next" data-testid="stage-next">
+          <span><b>Now: {stageDef.label}.</b> {stageDef.meaning}</span>
+          <Button variant={stageKey === "detected" || awaiting ? "primary" : "secondary"} size="sm" onClick={() => setTab(next.tab)}>
+            Next: {next.label}
+          </Button>
         </div>
-        <h2 style={{ margin: "0 0 var(--sp-4)", fontSize: "var(--fs-20)", fontWeight: 600 }}>{inc.title}</h2>
-        <div className="grid grid--3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
-          <Metric
-            label="Risk score" value={fmtNum(inc.risk_score)} tone={critical ? "critical" : inc.severity === "high" || inc.severity === "elevated" ? "elevated" : "default"}
-            meaning="Noisy-OR of independent adverse signals, multiplied by a source-diversity factor (0-100)."
-            implication={critical ? "Critical: act now." : "Higher means more independent systems agree something is wrong."}
-            provenance="computed"
-          />
-          <Metric label="Source systems" value={fmtNum(inc.n_sources)} meaning={`Independent systems moving together: ${inc.sources.join(", ")}.`} implication="Two or more systems agreeing is a pattern, not noise." provenance="computed" />
-          <Metric label="Revenue exposure" value={fmtINR(inc.value_at_stake)} meaning="Baseline 12-week order value of the affected scope." implication="Exposure, not predicted loss: what is in play if the account drifts away." provenance="computed" />
-          <Metric label="Silent period" value={`${fmtNum(inc.silent_period_days, 0)} days`} meaning={inc.silent_period_basis} implication="Roughly how much earlier Strata surfaced this than a manual review would." provenance="assumption" />
-          <Metric label="Estimated onset" value={fmtDate(inc.onset_estimated_at)} meaning={`First detected ${fmtDate(inc.first_detected_at, true)} (simulated clock).`} implication="Evidence before this date is the account's own baseline." provenance="computed" />
-        </div>
-      </Card>
+      </section>
 
       {inc.regulatory_sensitive ? (
-        <div role="alert" className="card" style={{ borderColor: "var(--amber-600)", background: "var(--amber-100)" }}>
+        <div role="note" className="case-route-only">
           <strong>Route-only: QA Head + four-eyes. Strata gives no clinical advice.</strong>
-          <p className="caption" style={{ margin: "var(--sp-1) 0 0" }}>This incident touches a regulatory-sensitive signal. Strata routes it to the QA Head and records decisions; it proposes no clinical or product-quality action.</p>
+          <span className="caption"> This case touches a regulatory-sensitive signal. STRATA routes it to the QA Head and records decisions; it proposes no clinical or product-quality action.</span>
         </div>
       ) : null}
 
-      {decisionMsg ? <div role="status" className="card" style={{ borderColor: "var(--green-600)" }}>{decisionMsg}</div> : null}
+      <MetricGroup title="Why this case matters">
+        <Metric
+          id="risk_score" label="Risk score" value={fmtNum(inc.risk_score)} unit="of 100"
+          compare="3+ systems needed for high/critical"
+          tone={critical ? "critical" : inc.severity === "high" || inc.severity === "elevated" ? "elevated" : "default"}
+          meaning={`${inc.n_sources} independent system${inc.n_sources === 1 ? "" : "s"} (${inc.sources.join(", ")}) agree; their signals are combined (noisy-OR) and scaled by how many systems agree.`}
+          implication={critical ? "Critical: act today." : "Higher means more independent systems agree something is wrong."}
+          provenance="computed"
+        />
+        <Metric
+          id="value_at_stake" label="₹ exposed" value={fmtINR(inc.value_at_stake)}
+          compare="Baseline 12-week order value of the affected scope"
+          meaning="What is at stake: the normal order value of the accounts in this case."
+          implication="Exposure, not a forecast of what will be lost."
+          provenance="computed"
+        />
+        <Metric
+          id="silent_period_days" label="Silent period" value={inc.silent_period_days != null ? fmtNum(inc.silent_period_days, 0) : "—"} unit="days"
+          compare={`Estimated onset ${fmtDate(inc.onset_estimated_at)}; detected ${fmtDate(inc.first_detected_at)} (simulated clock)`}
+          meaning={inc.silent_period_basis || "Days the problem existed before a weekly manual review would have caught it."}
+          implication="Roughly how much earlier STRATA surfaced this than a manual review would."
+          provenance="assumption"
+        />
+      </MetricGroup>
+      <p className="caption case-terms">
+        What these mean: <TermHint term="risk_score" label="risk score" /> · <TermHint term="exposure" label="₹ exposed" /> · <TermHint term="silent_period" label="silent period" />
+      </p>
+    </>
+  );
 
-      <Tabs
-        value={tab}
-        onChange={(t) => { setTab(t); if (t !== "evidence") setHighlight(null); }}
-        tabs={[
-          { id: "evidence", label: `Evidence (${inc.evidence.length})`, content: <EvidenceTab evidence={inc.evidence} blast={inc.blast_radius} highlight={highlight} /> },
-          { id: "map", label: "Causal map", content: <CausalMap incident={inc} /> },
-          { id: "trace", label: "Agent trace", content: <AgentTrace incident={inc} onChanged={reload} onChip={onChip} /> },
-          { id: "memory", label: "Memory", content: <MemoryTab matches={inc.investigation?.memory_matches ?? null} retrieval={inc.investigation?.retrieval} /> },
-          { id: "plan", label: awaiting ? "Plan (awaiting approval)" : "Plan", content: <PlanTab incident={inc} onChanged={reload} onChip={onChip} /> },
-        ]}
-      />
-
-      {plan && awaiting ? <ApprovalBar plan={plan} onDecided={(m) => { setDecisionMsg(m); reload(); }} /> : null}
-    </div>
+  return (
+    <PageTemplate
+      {...header}
+      title={`Case file · ${inc.ref}`}
+      question={inc.title}
+      headerActions={<Link href="/app/incidents" className={buttonClass("ghost", "sm")}>All cases</Link>}
+      glance={glance}
+    >
+      <div className="case-layout">
+        <div className="case-layout__main">
+          <Tabs
+            value={tab}
+            onChange={(t) => { setTab(t as TabId); if (t !== "happened") setHighlight(null); }}
+            tabs={[
+              { id: "happened", label: "What happened", content: <WhatHappenedTab incident={inc} highlight={highlight} /> },
+              { id: "why", label: "Why and what we did last time", content: <WhyTab incident={inc} onChanged={reloadAll} onChip={onChip} /> },
+              {
+                id: "todo", label: awaiting ? "What to do (decision needed)" : "What to do",
+                content: <PlanTab incident={inc} onChanged={reloadAll} onChip={onChip} decision={decision} onDecided={onDecided} onGoWhy={() => setTab("why")} />,
+              },
+            ]}
+          />
+        </div>
+        <aside className="case-layout__rail" aria-label="Case timeline">
+          <CaseTimeline incident={inc.ref} state={events} />
+        </aside>
+      </div>
+    </PageTemplate>
   );
 }

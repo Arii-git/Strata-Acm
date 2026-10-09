@@ -3,12 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  PageHeader, Card, Tabs, DataTable, EmptyState, ErrorState, Loading, StatusPill, Button, Caption, ProvenanceBadge,
+  Card, DataTable, Details, ErrorState, Loading, Metric, MetricGroup, PageTemplate, StatusPill, Button, Caption, ProvenanceBadge, buttonClass,
   type ColumnDef,
 } from "@/components/ui";
-import { useApi, apiPatch, apiPost, qs } from "@/lib/api/client";
+import { ArtEmptyState } from "@/components/diagrams/EmptyStateArt";
+import { useApi, apiPatch, apiPost, qs, type ApiState } from "@/lib/api/client";
 import { usePersona, personaLabel } from "@/lib/persona";
-import { fmtDate, humanize } from "@/lib/format";
+import { useViewMode } from "@/lib/viewmode";
+import { fmtDate, fmtNum, humanize } from "@/lib/format";
 import type { Task } from "@/lib/api/types";
 
 /* Local types (live engine shapes) */
@@ -33,14 +35,10 @@ const fieldStyle: React.CSSProperties = {
   padding: "var(--sp-2) var(--sp-3)", fontSize: "var(--fs-14)",
 };
 
-function statusTone(s: string) {
-  return s === "done" ? "ok" : s === "blocked" ? "bad" : s === "in_progress" ? "info" : "neutral";
-}
-
 /* ---------------------------------------------------------------- Tasks */
-function TasksTab() {
+function TasksTable({ tasks }: { tasks: ApiState<{ items: Task[] }> }) {
   const { persona } = usePersona();
-  const { data, error, loading, reload } = useApi<{ items: Task[] }>(qs("/workflows", { persona }));
+  const { data, error, loading, reload } = tasks;
   const [busy, setBusy] = useState<string | null>(null);
   const [patchErr, setPatchErr] = useState<string | null>(null);
 
@@ -65,11 +63,11 @@ function TasksTab() {
         return (
           <select
             aria-label={`Status of ${t.id}`}
+            className="select"
             value={t.status}
             disabled={busy === t.id}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => setStatus(t.id, e.target.value)}
-            style={{ ...fieldStyle, width: "auto", padding: "2px var(--sp-2)", fontSize: "var(--fs-13)" }}
           >
             {STATUSES.map((s) => <option key={s} value={s}>{humanize(s)}</option>)}
           </select>
@@ -89,16 +87,16 @@ function TasksTab() {
   if (loading && !data) return <Loading rows={6} label="Loading tasks" />;
   if (error) return <ErrorState error={error} onRetry={reload} />;
   const items = data?.items ?? [];
-  const drafts = items.filter((t) => DRAFT_CHANNELS.has(t.channel));
 
   return (
     <div className="stack">
       {patchErr ? <ErrorState error={new Error(patchErr)} title="Could not update the task" /> : null}
       {items.length === 0 ? (
-        <EmptyState
+        <ArtEmptyState
+          art="tasks"
           title="No tasks for this role yet"
           body="Tasks appear when a human approves an incident plan, or when an approved standing routine runs on the simulated clock."
-          action={<Link href="/app/approvals">Go to Approvals</Link>}
+          action={<Link className={buttonClass("secondary", "sm")} href="/app/approvals">Go to Approvals</Link>}
         />
       ) : (
         <DataTable
@@ -109,19 +107,27 @@ function TasksTab() {
           initialSort={[{ id: "due_at", desc: false }]}
         />
       )}
-      <Card title="Simulated outbox" provenance="synthetic">
+    </div>
+  );
+}
+
+function Outbox({ tasks }: { tasks: Task[] }) {
+  const drafts = tasks.filter((t) => DRAFT_CHANNELS.has(t.channel));
+  return (
+    <div className="stack">
+      <div className="row"><ProvenanceBadge provenance="synthetic" />
         <Caption
-          meaning="Drafts Strata prepared for a human to review and send through the usual channel."
-          implication="Nothing here has been sent. Strata never contacts customers or suppliers itself."
+          meaning="Drafts STRATA prepared for a human to review and send through the usual channel."
+          implication="Nothing here has been sent. STRATA never contacts customers or suppliers itself."
         />
-        {drafts.length === 0 ? (
-          <p className="muted" style={{ fontSize: "var(--fs-13)" }}>No drafts for this role.</p>
-        ) : (
-          <div className="grid grid--2" style={{ marginTop: "var(--sp-3)" }}>
-            {drafts.map((t) => <DraftCard key={t.id} task={t} />)}
-          </div>
-        )}
-      </Card>
+      </div>
+      {drafts.length === 0 ? (
+        <p className="muted" style={{ fontSize: "var(--fs-13)" }}>No drafts for this role.</p>
+      ) : (
+        <div className="grid grid--2">
+          {drafts.map((t) => <DraftCard key={t.id} task={t} />)}
+        </div>
+      )}
     </div>
   );
 }
@@ -150,7 +156,7 @@ function DraftCard({ task }: { task: Task }) {
 }
 
 /* ---------------------------------------------------------------- Notes */
-function NotesTab() {
+function NotesSection() {
   const { persona, label } = usePersona();
   const { data, error, loading, reload } = useApi<{ items: NoteRow[] }>("/notes");
   const [body, setBody] = useState("");
@@ -171,19 +177,13 @@ function NotesTab() {
   return (
     <div className="grid grid--2" style={{ alignItems: "start" }}>
       <Card title="Leave a handoff note">
-        <form onSubmit={submit} className="stack">
+        <form onSubmit={submit} className="stack" id="handoff-note">
           <label className="stack" style={{ gap: "var(--sp-1)" }}>
             <span style={{ fontSize: "var(--fs-13)", fontWeight: 500 }}>Note</span>
-            <textarea
-              rows={5}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              style={fieldStyle}
-              aria-describedby="note-hint"
-            />
+            <textarea rows={5} value={body} onChange={(e) => setBody(e.target.value)} style={fieldStyle} aria-describedby="note-hint" />
             <span id="note-hint" className="caption">Mention a role with @account_manager, @support_manager, @operations_manager… The engine extracts mentions.</span>
           </label>
-          {postErr ? <p style={{ color: "var(--crimson-700)", fontSize: "var(--fs-13)" }}>Could not post: {postErr}</p> : null}
+          {postErr ? <p role="alert" style={{ color: "var(--crimson-700)", fontSize: "var(--fs-13)" }}>Could not post: {postErr}</p> : null}
           <div className="row">
             <Button variant="primary" type="submit" disabled={posting || !body.trim()}>{posting ? "Posting…" : `Post as ${label}`}</Button>
           </div>
@@ -192,7 +192,7 @@ function NotesTab() {
       <Card title="Notes" provenance="synthetic">
         {loading && !data ? <Loading rows={4} label="Loading notes" />
           : error ? <ErrorState error={error} onRetry={reload} />
-          : (data?.items.length ?? 0) === 0 ? <EmptyState title="No notes yet" body="Notes let one role hand context to another without a meeting." />
+          : (data?.items.length ?? 0) === 0 ? <ArtEmptyState art="notebook" title="No notes yet" body="Notes let one role hand context to another without a meeting." />
           : (
             <ul className="stack" style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {data!.items.map((n) => (
@@ -216,9 +216,9 @@ function NotesTab() {
 }
 
 /* ---------------------------------------------------------------- Routines */
-function RoutinesTab() {
+function RoutinesSection({ routines }: { routines: ApiState<{ items: RoutineRow[] }> }) {
   const { persona, label } = usePersona();
-  const { data, error, loading, reload } = useApi<{ items: RoutineRow[] }>("/routines");
+  const { data, error, loading, reload } = routines;
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -240,7 +240,7 @@ function RoutinesTab() {
         implication="Their outputs are internal and simulated (tasks, drafts, digests, notes), nothing is sent, and every approval and run is written to the audit trail."
       />
       {err ? <ErrorState error={new Error(err)} title="Could not approve the routine" /> : null}
-      {items.length === 0 ? <EmptyState title="No routines configured" body="Routines are defined in contracts/engagement_rules.yaml." /> : (
+      {items.length === 0 ? <ArtEmptyState art="tasks" title="No routines configured" body="Routines are defined in contracts/engagement_rules.yaml." /> : (
         <div className="grid grid--2">
           {items.map((r) => (
             <Card
@@ -287,17 +287,68 @@ function RoutinesTab() {
   );
 }
 
+function takeaway(tasks: Task[] | null, role: string): string {
+  if (!tasks) return "Loading tasks…";
+  const open = tasks.filter((t) => t.status !== "done");
+  if (!open.length) return tasks.length ? `All ${fmtNum(tasks.length)} tasks for ${role} are done.` : `No tasks for ${role} yet; they appear after a plan is approved.`;
+  const blocked = open.filter((t) => t.status === "blocked").length;
+  const next = [...open].sort((a, b) => a.due_at.localeCompare(b.due_at))[0];
+  return `${fmtNum(open.length)} open task${open.length === 1 ? "" : "s"} for ${role}${blocked ? `, ${fmtNum(blocked)} blocked` : ""}; next due: ${next.title} (${fmtDate(next.due_at, true)}, simulated).`;
+}
+
 export default function WorkflowsPage() {
+  const { persona, label } = usePersona();
+  const { mode } = useViewMode();
+  const open = mode === "detailed";
+  const tasks = useApi<{ items: Task[] }>(qs("/workflows", { persona }));
+  const routines = useApi<{ items: RoutineRow[] }>("/routines");
+  const items = tasks.data?.items ?? [];
+  const openTasks = items.filter((t) => t.status !== "done");
+  const blocked = openTasks.filter((t) => t.status === "blocked").length;
+  const drafts = items.filter((t) => DRAFT_CHANNELS.has(t.channel)).length;
+  const rItems = routines.data?.items ?? [];
+  const approvedR = rItems.filter((r) => r.status === "approved").length;
+
   return (
-    <div className="stack">
-      <PageHeader question="Who owns what, and what is stuck?" title="Workflows & Handoffs" />
-      <Tabs
-        tabs={[
-          { id: "tasks", label: "Tasks", content: <TasksTab /> },
-          { id: "notes", label: "Handoffs & Notes", content: <NotesTab /> },
-          { id: "routines", label: "Standing Routines", content: <RoutinesTab /> },
-        ]}
-      />
-    </div>
+    <PageTemplate
+      explainKey="workflows"
+      title="Workflows & Handoffs"
+      question="Who owns what, and what is stuck?"
+      glance={tasks.data ? (
+        <MetricGroup title="At a glance">
+          <Metric id="tasks_open" label="Open tasks" value={fmtNum(openTasks.length)} unit={openTasks.length === 1 ? "task" : "tasks"}
+            compare={`for ${label}; ${fmtNum(blocked)} blocked`}
+            meaning="Simulated tasks owned by this role that are not done."
+            implication={blocked ? "Chase the blocked handoffs first." : "Nothing is blocked."}
+            provenance="computed" next={{ label: "Plans waiting for approval", href: "/app/approvals" }} />
+          <Metric id="drafts_waiting" label="Drafts to review" value={fmtNum(drafts)} unit={drafts === 1 ? "draft" : "drafts"}
+            compare="WhatsApp and email drafts, never sent"
+            meaning="Messages STRATA prepared for a human to review and send through the usual channel."
+            implication="Nothing is sent automatically." provenance="computed" />
+          <Metric id="routines_approved" label="Routines approved" value={fmtNum(approvedR)} unit={`of ${fmtNum(rItems.length)}`}
+            compare="standing routines a human approved once"
+            meaning="Routines run only on the simulated clock after one human approval."
+            implication={approvedR < rItems.length ? "Unapproved routines never run." : "All routines will run when the Lab advances time."}
+            provenance="computed" next={{ label: "Advance time in the Lab", href: "/app/lab" }} />
+        </MetricGroup>
+      ) : undefined}
+      visual={{ takeaway: takeaway(tasks.data?.items ?? null, label), node: <TasksTable tasks={tasks} /> }}
+      actions={
+        <>
+          <Link className={buttonClass("primary")} href="/app/approvals">Review plans waiting for approval</Link>
+          <a className={buttonClass("secondary")} href="#handoff-note">Leave a handoff note</a>
+        </>
+      }
+    >
+      <Details title={`Simulated outbox (${fmtNum(drafts)})`} defaultOpen={open}>
+        <Outbox tasks={items} />
+      </Details>
+      <Details title="Handoffs & notes" defaultOpen={open}>
+        <NotesSection />
+      </Details>
+      <Details title={`Standing routines (${fmtNum(approvedR)} of ${fmtNum(rItems.length)} approved)`} defaultOpen={open}>
+        <RoutinesSection routines={routines} />
+      </Details>
+    </PageTemplate>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, Card, EmptyState, ErrorState, Loading, Button } from "@/components/ui";
+import { Card, ErrorState, Loading, Button, Metric, MetricGroup, PageTemplate } from "@/components/ui";
+import { ArtEmptyState } from "@/components/diagrams/EmptyStateArt";
 import { useApi, apiPost, ApiError } from "@/lib/api/client";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtNum } from "@/lib/format";
 
 interface Entry { id?: string; author: string; tried: string; happened: string; changed?: string | null; evidence?: string | null; created_at?: string }
 interface NotebookResp { items: Entry[]; rule?: string }
@@ -66,9 +67,29 @@ export default function NotebookPage() {
 
   const items = data?.items ?? [];
 
+  const latest = items[0];
+  const takeaway = !data ? "Loading the notebook…"
+    : !items.length ? "No entries yet: the team writes the first one."
+    : `${fmtNum(items.length)} human-written entr${items.length === 1 ? "y" : "ies"}; latest by ${latest.author}${latest.created_at ? ` on ${fmtDate(latest.created_at)}` : ""}.`;
+
   return (
-    <div className="stack">
-      <PageHeader question="What did we try, what failed, what did we change?" title="Engineering Notebook" />
+    <PageTemplate
+      explainKey="notebook"
+      title="Engineering Notebook"
+      question="What did we try, what failed, what did we change?"
+      glance={data ? (
+        <MetricGroup title="At a glance">
+          <Metric id="notebook_entries" label="Entries" value={fmtNum(items.length)} unit={items.length === 1 ? "entry" : "entries"}
+            compare="written by people, never by STRATA"
+            meaning="Human-written notes on what the team tried, what happened and what changed."
+            implication={items.length ? "Read the latest before changing the same part again." : "Add the first entry after the next experiment."}
+            provenance="computed" />
+        </MetricGroup>
+      ) : undefined}
+      visual={{
+        takeaway,
+        node: (
+          <div className="stack" style={{ gap: "var(--sp-3)" }}>
       <div role="note" style={{ border: "1px solid var(--line-strong)", borderLeft: "4px solid var(--indigo-800)", background: "var(--surface)", borderRadius: "var(--r-md)", padding: "var(--sp-3) var(--sp-4)", fontWeight: 600, fontSize: "var(--fs-14)" }}>
         {data?.rule ?? RULE}
       </div>
@@ -77,7 +98,7 @@ export default function NotebookPage() {
           {loading && !data ? <Loading rows={4} label="Loading notebook" />
             : error ? <ErrorState error={error} onRetry={reload} />
             : items.length === 0 ? (
-              <EmptyState title="No entries yet" body="What did we try? What happened? What did we change because of it?" />
+              <ArtEmptyState art="notebook" title="No entries yet" body="Entries appear here when a team member writes one: what did we try, what happened, what did we change because of it? STRATA never writes here." />
             ) : (
               <ol className="stack" style={{ listStyle: "none", margin: 0, padding: 0 }}>
                 {items.map((n, i) => (
@@ -99,7 +120,7 @@ export default function NotebookPage() {
               </ol>
             )}
         </Card>
-        <Card title="Add an entry">
+        <Card title="Add an entry" id="notebook-form">
           <form onSubmit={submit} className="stack" noValidate>
             <Field id="author" label="Your name" value={form.author} onChange={set("author")} required />
             <Field id="tried" label="What did we try?" value={form.tried} onChange={set("tried")} multiline required />
@@ -116,6 +137,10 @@ export default function NotebookPage() {
           </form>
         </Card>
       </div>
-    </div>
+          </div>
+        ),
+      }}
+      actions={<a className="btn btn--primary" href="#nb-author">Add an entry</a>}
+    />
   );
 }

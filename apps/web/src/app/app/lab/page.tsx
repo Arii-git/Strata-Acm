@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Button, buttonClass, SeverityPill, StatusPill, ProvenanceBadge, ErrorState, Caption } from "@/components/ui";
+import {
+  Card, Button, buttonClass, SeverityPill, StatusPill, ProvenanceBadge, ErrorState, Caption, Details, Metric, MetricGroup, PageTemplate,
+} from "@/components/ui";
+import { useViewMode } from "@/lib/viewmode";
 import { useApi, apiPost, apiGet } from "@/lib/api/client";
 import { fmtDate, fmtNum, humanize } from "@/lib/format";
 import type { Severity } from "@/lib/api/types";
@@ -31,6 +34,7 @@ function StepCard({ n, title, caption, done, children }: { n: number; title: str
 function errText(e: unknown) { return e instanceof Error ? e : new Error(String(e)); }
 
 export default function LabPage() {
+  const { mode } = useViewMode();
   const health = useApi<HealthResp>("/health");
   const replay = health.data?.mode === "replay";
 
@@ -77,9 +81,32 @@ export default function LabPage() {
   const stepErr = (s: string) => (err?.step === s ? <ErrorState error={err.error} title="That step did not complete" /> : null);
   const approved = incState?.plan?.status === "approved" || incState?.status === "executing" || incState?.status === "resolved";
 
+  const done = [!!inject, !!inv, approved, !!adv].filter(Boolean).length;
+  const takeaway = !inject ? "Step 1 of 4: inject the supplier-delay pattern into a healthy stockist to start the loop."
+    : !ref ? "The injected pattern was not detected; reset and try again."
+    : !inv ? `Detected as ${ref}${inject.severity ? ` (${inject.severity})` : ""}. Step 2 of 4: investigate it.`
+    : !approved ? `Likely cause: ${inv.cause ? humanize(inv.cause) : "undetermined"}. Step 3 of 4: a human approves the plan.`
+    : !adv ? `${ref} plan approved. Step 4 of 4: fast-forward 14 simulated days to record the (scripted) outcome.`
+    : `Loop closed: ${fmtNum(adv.outcomes_recorded)} outcome${adv.outcomes_recorded === 1 ? "" : "s"} recorded (illustrative), ${fmtNum(adv.memory_written.length)} memory item${adv.memory_written.length === 1 ? "" : "s"} written.`;
+
   return (
-    <div className="stack">
-      <PageHeader question="Show me it working on something new." title="Simulation Lab" />
+    <PageTemplate
+      explainKey="lab"
+      title="Simulation Lab"
+      question="Show me it working on something new."
+      glance={
+        <MetricGroup title="Loop progress">
+          <Metric id="lab_steps_done" label="Steps done" value={fmtNum(done)} unit="of 4 steps"
+            compare="inject → investigate → approve → fast-forward"
+            meaning="How far this Lab run has gone through the loop, counted from the steps below."
+            implication={done < 4 ? "Do the next step below." : "Check Outcomes and Memory for what was recorded."}
+            provenance="computed" next={done === 4 ? { label: "See Outcomes", href: "/app/outcomes" } : undefined} />
+        </MetricGroup>
+      }
+      visual={{
+        takeaway,
+        node: (
+          <div className="stack">
       <div role="note" style={{ border: "1px solid var(--line-strong)", borderLeft: "4px solid var(--amber-600)", background: "var(--surface)", borderRadius: "var(--r-md)", padding: "var(--sp-3) var(--sp-4)", fontSize: "var(--fs-13)" }}>
         <div className="row" style={{ flexWrap: "wrap" }}>
           <span style={{ fontWeight: 600 }}>Mode: {health.data ? humanize(health.data.mode) : "…"}</span>
@@ -160,12 +187,19 @@ export default function LabPage() {
         ) : null}
       </StepCard>
 
+          </div>
+        ),
+      }}
+      actions={ref ? <Link className={buttonClass("primary")} href={`/app/incidents/${ref}`}>Open {ref}</Link> : <Button variant="primary" onClick={doInject} disabled={busy !== null}>Start: inject a scenario</Button>}
+    >
+      <Details title="Reset the simulation" defaultOpen={mode === "detailed" || resetDone}>
       <StepCard n={5} title="Reset" done={resetDone}
         caption="Restores the simulated state so the demo can run again. It never deletes Engineering Notebook entries or human-authored memory.">
         <div className="row"><Button variant="danger" onClick={doReset} disabled={busy !== null}>{busy === "reset" ? "Resetting…" : "Reset simulated state"}</Button></div>
         {stepErr("reset")}
         {resetDone ? <p style={{ margin: 0, fontSize: "var(--fs-13)" }}>Simulated state restored.</p> : null}
       </StepCard>
-    </div>
+      </Details>
+    </PageTemplate>
   );
 }

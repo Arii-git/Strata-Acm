@@ -6,6 +6,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { CommandPalette } from "./CommandPalette";
 import { NAV_ITEMS } from "./nav";
+import { GuidedBar, GuidedProvider, useGuided } from "@/components/features/guided";
 
 const COLLAPSE_KEY = "strata.sidebar.collapsed";
 
@@ -15,6 +16,15 @@ function isTypingTarget(t: EventTarget | null): boolean {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <GuidedProvider>
+      <ShellFrame>{children}</ShellFrame>
+    </GuidedProvider>
+  );
+}
+
+function ShellFrame({ children }: { children: React.ReactNode }) {
+  const guided = useGuided();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [palette, setPalette] = useState(false);
@@ -55,8 +65,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [router, palette]);
 
   return (
-    <div className={`shell${collapsed ? " is-collapsed" : ""}`}>
-      <a href="#main" className="skip-link">Skip to content</a>
+    <div className={`shell${collapsed ? " is-collapsed" : ""}${guided.active ? " has-guided" : ""}`}>
+
       <Sidebar collapsed={collapsed} onToggle={toggle} />
       <div className="shell__main">
         <TopBar onOpenPalette={() => setPalette(true)} />
@@ -64,6 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="shell__inner">{children}</div>
         </main>
       </div>
+      <GuidedBar />
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
     </div>
   );

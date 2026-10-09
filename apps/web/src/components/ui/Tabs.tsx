@@ -8,10 +8,12 @@ export interface TabItem {
   content: React.ReactNode;
 }
 
-/** Accessible tabs (ARIA tablist; Left/Right/Home/End keys). Controlled via `value`/`onChange`, or uncontrolled. */
-export function Tabs({ tabs, value, onChange, defaultValue }: { tabs: TabItem[]; value?: string; onChange?: (id: string) => void; defaultValue?: string }) {
+/** WAI-ARIA tabs (automatic activation): Left/Right wrap, Home/End jump, Tab moves into the panel; one tab stop. Controlled via `value`/`onChange`, or uncontrolled. */
+export function Tabs({ tabs, value, onChange, defaultValue, label }: { tabs: TabItem[]; value?: string; onChange?: (id: string) => void; defaultValue?: string; /** accessible name for the tab list */ label?: string }) {
   const [inner, setInner] = useState(defaultValue ?? tabs[0]?.id);
-  const active = value ?? inner;
+  const wanted = value ?? inner;
+  // keep exactly one tab stop even if `value` names a tab that is not in the list
+  const active = tabs.some((t) => t.id === wanted) ? wanted : tabs[0]?.id;
   const uid = useId();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -34,7 +36,7 @@ export function Tabs({ tabs, value, onChange, defaultValue }: { tabs: TabItem[];
 
   return (
     <div className="tabs">
-      <div role="tablist" className="tabs__list">
+      <div role="tablist" aria-orientation="horizontal" aria-label={label} className="tabs__list">
         {tabs.map((t, i) => (
           <button
             key={t.id}

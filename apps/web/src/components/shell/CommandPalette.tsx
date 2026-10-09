@@ -12,7 +12,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   const items = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return s ? NAV_ITEMS.filter((i) => `${i.label} ${i.section}`.toLowerCase().includes(s)) : NAV_ITEMS;
+    return s ? NAV_ITEMS.filter((i) => `${i.label} ${i.section} ${i.hint}`.toLowerCase().includes(s)) : NAV_ITEMS;
   }, [q]);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         <input
           ref={input}
           className="palette__input"
-          placeholder="Go to page…"
+          placeholder="Go to page… (type a name or what you want to do)"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onKey}
@@ -60,7 +60,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                 onClick={() => go(i.href)}
               >
                 <Icon size={16} stroke={1.5} aria-hidden="true" />
-                {i.label}
+                <span className="palette__text">
+                  <span>{i.label}</span>
+                  <span className="palette__hint">{i.hint}</span>
+                </span>
                 <small>{i.section} · g {i.key}</small>
               </li>
             );

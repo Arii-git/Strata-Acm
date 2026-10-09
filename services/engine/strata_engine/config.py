@@ -23,7 +23,7 @@ ENGINE_VERSION = "0.1.0"
 CATALOG = yaml.safe_load((CONTRACTS / "signal_catalog.yaml").read_text(encoding="utf-8"))
 ENGAGEMENT = yaml.safe_load((CONTRACTS / "engagement_rules.yaml").read_text(encoding="utf-8"))
 
-ALL_FEATURES = ["A1", "A2", "A3", "A4", "A7", "A10", "A11", "A12", "A13", "A14", "A16", "A17", "A18", "A19", "A20", "A21", "A22"]
+ALL_FEATURES = ["A1", "A2", "A3", "A4", "A7", "A10", "A11", "A12", "A13", "A14", "A16", "A17", "A18", "A19", "A20", "A21", "A22", "A23", "A24"]
 FEATURES = [x.strip() for x in os.environ.get("STRATA_FEATURES", ",".join(ALL_FEATURES)).split(",") if x.strip()]
 
 ROLE_LABELS = {

@@ -28,6 +28,11 @@ export type WbIncident = Omit<IncidentDetail, "account_id" | "evidence" | "plan"
   tasks: WbTask[];
   outcomes: WbOutcome[];
   notes?: Note[];
+  /** review-1 fields (docs/API.md, "Added in review 1"); mirrored here until lib/api/types catches up */
+  category: string;
+  category_label?: string;
+  stage: string;
+  stage_label?: string;
 };
 export type WbIncidentSummary = Omit<WbIncident, "evidence" | "blast_radius" | "investigation" | "plan" | "approvals" | "tasks" | "outcomes" | "notes" | "onset_estimated_at" | "first_detected_at" | "silent_period_days" | "silent_period_basis">;
 export type WbMemoryItem = Omit<MemoryItem, "steps"> & {
@@ -79,6 +84,18 @@ export const labelStyle: CSSProperties = { fontSize: "var(--fs-12)", color: "var
 export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || !window.matchMedia) return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** "4 h", "36 h", "14 d" — plan due times are given in hours by the engine. */
+export function fmtHours(h: number): string {
+  return h >= 48 ? `${fmtNum(h / 24, h % 24 ? 1 : 0)} d` : `${fmtNum(h)} h`;
+}
+
+/** Plain label for a memory item's author (DRAFT seed items stay labelled DRAFT). */
+export function memoryAuthorLabel(author: string): string {
+  if (author === DRAFT_AUTHOR) return "DRAFT memory item";
+  if (author === "strata-system") return "learning-loop memory item";
+  return `memory item by ${author}`;
 }
 
 export const MEMORY_NOTE =

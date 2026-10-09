@@ -1,0 +1,32 @@
+# Lane E: accessibility and global polish (L8)
+
+- **Skip link and live region.** `app/layout.tsx` mounts `<SkipLink/>` as the first focusable element. It targets `#main` and falls back to the first `<main>`. The layout also mounts `<LiveRegion/>`, which provides polite and assertive regions. `next.config.ts` sets `devIndicators: false` and keeps the rewrite and `externalDir`.
+- **`announce()` for async results.** `import { announce } from "@/components/ui/states"`, then call `announce("Plan approved")` after an async action, or `announce(msg, "assertive")` for failures. It is safe from any client code; messages sent before the region mounts are queued.
+- **States.** `EmptyState` and `ErrorState` take an optional `next` prop ("What to do next: …"). `ErrorState` has a default hint. `Loading` sets `aria-busy` and `role=status`. All props are unchanged.
+- **Charts.** `EChart` mounts only once its box has a size. It then resizes on ResizeObserver, `visibilitychange`, `<details>` toggle and window resize, so charts in tabs, details and drawers are no longer blank. Inside `ChartFrame` it gets `aria-describedby` pointing at the caption, and the title as its default label. `ChartFrame` adds a "View as table" toggle; `chartOptionToTable()` handles category axes, [x,y] pairs, pie charts and `dataset.source`. If none of those fit, it shows "Table not available for this chart". Required props are unchanged; `ChartFrame` is now a client component.
+- **`DataTable`.** Adds a `<caption>` for screen readers, `scope=col`, and `aria-sort` (including `none` on sortable columns). Sort buttons announce their state. Rows stay 48 px and keep Enter/Space activation, now ignored when focus is on a link inside the row.
+- **`Drawer`.** It is a dialog with `aria-modal`, labelled by an `<h2>` title. Focus is trapped inside, Esc closes it, focus returns to the opener, and an inline `onClose` no longer steals focus on re-render.
+- **`Tabs`.** Adds an optional `label` prop and `aria-orientation`. There is always exactly one tab stop.
+- **Pills.** Already dot plus word; checked, no change.
+- **CSS (`styles/lanes/a11y.css`, loaded last).** It adds:
+  - a focus ring on every interactive element, with a forced-colors fallback
+  - `prefers-reduced-motion`, which removes all transitions and animations
+  - 44 px targets for `.btn`/`.btn--sm`, inputs, selects, tabs, the segmented control and sort headers
+  - 44 px hit areas for the term-hint and evidence chips
+  - text-resize-safe pills and chips
+  - topbar wrapping, a vertical stage tracker and wrapping buttons below 900–1100 px, so a 640 px viewport (1280 px at 200 %) has no horizontal scroll on the 12 routes measured
+- **`globals.css`.** The `.prov` font size of 10 px and the landing wordmark size of 72 px now use tokens.
+- **Lints.**
+  - `lint-contrast` reads tokens and tokens-v2 and checks 30 pairs (caption `--ink-3`, sidebar `--indigo-200`/800/700, `--ink-2` on `--indigo-50`, …) plus the v2 floors: 16 px text, 14 px caption, 44 px target, 48 px row.
+  - `lint-honesty` also scans `config/**`, requires `provenance=` and `caption=` on `<DataTable>`, and in `components/diagrams/**` checks any `<…Frame>`. A fixture self-test caught all four planted hits.
+- **Tests.** `tests/e2e/a11y.spec.ts` covers 23 routes in Simple and Detailed mode (Detailed opens every `<details>`) with axe tags wcag2a/aa, 21a/aa and 22aa, writing `tests/screens/axe-summary-v2.json`. Run on 2026-10-09: 46/46 routes checked, 0 serious, 0 critical, 0 skipped. The keyboard test (skip link → main → path card → Explain → focus trap → Esc returns focus) passes, so the suite is 47/47 green.
+- **Run it with its own output folder.** Other Playwright runs wipe the shared `tests/e2e/.results`:
+  `npx playwright test tests/e2e/a11y.spec.ts --output=%TEMP%/pw-a11y`
+- **Requests to other owners** are in `docs/handoffs/laneE-requests.md`:
+  - remove the duplicate shell skip link
+  - add `id="main"` on the landing page
+  - export the new helpers from the barrel
+  - a TermHint popover role
+  - collapse the sidebar below 760 px
+  - pages should call `announce()`
+- tsc, lint-hex, lint-honesty and lint-contrast are all green. Nothing is committed.

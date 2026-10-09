@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { apiPost } from "@/lib/api/client";
-import { Button, Card, DataTable, EmptyState, ProvenanceBadge, StatusPill, type ColumnDef } from "@/components/ui";
+import { Button, Card, DataTable, ProvenanceBadge, StatusPill, type ColumnDef } from "@/components/ui";
 import { fmtDate, humanize } from "@/lib/format";
 import { Chips, prefersReducedMotion, type WbIncident } from "./shared";
 
@@ -75,12 +75,15 @@ export function AgentTrace({ incident, onChanged, onChip }: { incident: WbIncide
 
   if (!inv) {
     return (
-      <Card title="Agent trace">
-        <EmptyState
-          title="Not yet investigated"
-          body="Run the four agents: Sentinel confirms the signals, Investigator ranks causes from the fixed taxonomy, Memory retrieves similar past cases, Orchestrator drafts a plan for human approval."
-          action={<Button variant="primary" onClick={run} disabled={running}>{running ? "Running investigation" : "Run investigation"}</Button>}
-        />
+      <Card title="Not yet investigated">
+        <div className="run-investigation" data-testid="run-investigation">
+          <p style={{ margin: 0 }}>
+            Running the investigation confirms the signals, ranks the likely cause, finds similar past cases in memory and drafts a plan for a human to approve; nothing is sent.
+          </p>
+          <div>
+            <Button variant="primary" onClick={run} disabled={running}>{running ? "Running investigation" : "Run investigation"}</Button>
+          </div>
+        </div>
         {err ? <p className="caption" role="alert" style={{ color: "var(--crimson-700)" }}>{err}</p> : null}
       </Card>
     );

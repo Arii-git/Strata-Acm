@@ -7,7 +7,7 @@ const LOOP = ["Observe", "Detect", "Investigate", "Remember", "Act", "Learn"];
 export default function Landing() {
   return (
     <div className="landing">
-      <main className="landing__main">
+      <main id="main" className="landing__main">
         <div className="landing__brand">
           <span className="brand-mark" aria-hidden="true" />
           <span className="landing__district">{DISTRICT}</span>

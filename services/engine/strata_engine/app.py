@@ -198,7 +198,7 @@ def summary(inc: Incident) -> dict[str, Any]:
             "status": st.get("status", "detected"), "cause": st.get("cause", "not_investigated"),
             "cause_confidence": st.get("cause_confidence"), "driver": inc.driver, "regulatory_sensitive": inc.regulatory_sensitive,
             "owner_role": inc.owner_role, "age_days": (D0 - datetime.fromisoformat(inc.onset).date()).days if inc.onset else None,
-            "rank_score": round(rank, 2), "sim_run_id": inc.sim_run_id, **classify(inc, st)}
+            "rank_score": round(rank, 2), "sim_run_id": inc.sim_run_id, "persistence_bonus": inc.persistence_bonus, **classify(inc, st)}
 
 
 def classify(inc: Incident, st: dict[str, Any]) -> dict[str, Any]:

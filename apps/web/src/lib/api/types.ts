@@ -55,6 +55,8 @@ export interface IncidentSummary {
   n_sources: number; sources: string[]; value_at_stake: number; status: string;
   cause: string | null; cause_confidence: number | null; driver: string;
   regulatory_sensitive: boolean; owner_role: string; age_days: number; rank_score: number;
+  /** review 1: taxonomy (config/taxonomy.ts) */
+  category?: string; category_label?: string; stage?: string; stage_label?: string; persistence_bonus?: boolean;
 }
 export interface RisksResponse extends ListResponse<IncidentSummary> {
   held_back: HeldBack[]; budget: number; shown: number; total: number;

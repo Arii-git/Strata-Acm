@@ -1,1 +1,23 @@
 /* lane: pages - only colour tokens via var(--...) */
+
+/* empty states with line art */
+.art-empty { align-items: center; text-align: center; }
+.art-empty .caption { max-width: 56ch; }
+.empty-art { display: block; flex: none; }
+
+/* sources: feed tiles (status = pill word + dot, never colour alone) */
+.feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-3); }
+.feed-tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-1); }
+.feed-tile .caption { max-width: none; }
+
+/* evaluation: read-this-first note */
+.eval-note { border: 1px solid var(--line-strong); border-left: 4px solid var(--amber-600); background: var(--surface); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+
+/* account: top next-best action in the What to do row */
+.nba-line { display: flex; flex-direction: column; gap: var(--sp-1); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); padding: var(--sp-3) var(--sp-4); max-width: 72ch; }
+.linked-incidents { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.linked-incidents > li { border-bottom: 1px solid var(--line); padding-bottom: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-1); }
+.linked-incidents > li:last-child { border-bottom: 0; padding-bottom: 0; }
+
+/* 44px targets for selects and inputs on these pages */
+.page-template input[type="search"], .page-template input[type="text"], .page-template select { min-height: var(--control-h); }

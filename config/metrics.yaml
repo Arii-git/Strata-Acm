@@ -1,0 +1,874 @@
+# =====================================================================
+# STRATA | config/metrics.yaml | metric dictionary (A24, lane L6)
+# One entry per metric / signal id shown anywhere in the console.
+# Served by the engine at GET /metrics/dictionary and rendered on /app/help.
+# Required fields: id, name, unit, formula, good_direction (up|down|neither),
+#   compare, implies, action, provenance (computed|synthetic|illustrative|assumption)
+# Optional: term (key in config/terms.ts), group (glossary section), status.
+# Every <Metric id="..."> in apps/web/src must exist here (scripts/check-metric-ids.mjs).
+# Source of truth for formulas: docs/DEFEND_IT.md, contracts/signal_catalog.yaml, the engine code.
+# All data is synthetic (fictional accounts); "computed" means computed from that synthetic data.
+# =====================================================================
+
+# ---------------------------------------------------------------- signals (contracts/signal_catalog.yaml)
+- id: order_volume_delta
+  group: Signals
+  name: Order volume change
+  unit: "% vs own normal"
+  formula: "Units ordered in the last 4 weeks compared with this account's own normal 4-week level (median of its rolling 4-week history, seasonality-adjusted), as a percentage change."
+  good_direction: up
+  compare: "This account's own normal 4 weeks over the past two years, not other accounts."
+  implies: "A fall means the customer is buying less than usual. On its own it is weak evidence; together with supply or service signals it is a pattern."
+  action: "Look for a supply, service or field signal moving at the same time before calling the customer."
+  provenance: computed
+  term: baseline
+- id: order_value_delta
+  group: Signals
+  name: Order value change
+  unit: "% vs own normal"
+  formula: "Order value in rupees over the last 4 weeks compared with this account's own normal 4-week value, as a percentage change."
+  good_direction: up
+  compare: "This account's own normal 4 weeks."
+  implies: "Falls faster than volume when the customer shifts to cheaper products, not only fewer units."
+  action: "Compare with order volume; if value falls more, check which products were dropped."
+  provenance: computed
+  term: baseline
+- id: reorder_interval_drift
+  group: Signals
+  name: Reorder interval drift
+  unit: days
+  status: "In the catalog but not computed in this prototype (scenario S02 was cut)."
+  formula: "For chronic-therapy products only: median days between reorders in the last 8 weeks minus the account's normal interval. Not computed in this prototype."
+  good_direction: down
+  compare: "The account's own normal reorder interval."
+  implies: "Reordering later than usual can mean patients are missing refills or switching brand."
+  action: "None in this prototype; the signal is listed so the catalog is complete."
+  provenance: computed
+- id: opportunity_volume_growth
+  group: Signals
+  name: Growth with a product gap
+  unit: robust z
+  formula: "Order growth in two or more therapy areas while a complementary therapy area has near-zero purchases. Favourable-only: it creates an opportunity, never a risk."
+  good_direction: up
+  compare: "The account's own normal volume in each therapy area."
+  implies: "A growing account that does not buy a related line is a cross-sell gap."
+  action: "Plan a cross-sell visit with samples for the missing line."
+  provenance: computed
+- id: fill_rate
+  group: Signals
+  name: Fill rate
+  unit: "share (0–1)"
+  formula: "Units shipped divided by units ordered over the last 4 weeks."
+  good_direction: up
+  compare: "This account's (or product's) own normal fill rate."
+  implies: "A fall usually means a supply problem on our side, not lower demand from the customer."
+  action: "Check stock cover and the supplier's arrival date for the short product; reallocate stock."
+  provenance: computed
+- id: delivery_delay_days
+  group: Signals
+  name: Delivery delay
+  unit: days
+  formula: "Average of (delivered date minus promised date) over the last 4 weeks."
+  good_direction: down
+  compare: "This account's own normal lateness."
+  implies: "Customers feel late deliveries before they complain; rising delay often comes before complaints."
+  action: "Check the dispatch backlog for this account and tell the customer the real date."
+  provenance: computed
+- id: stock_cover_days
+  group: Signals
+  name: Stock cover
+  unit: days
+  formula: "Warehouse stock on hand divided by the average daily dispatch over the last 4 weeks, per product."
+  good_direction: up
+  compare: "This product's own normal stock cover."
+  implies: "Under about a week of cover the product becomes the likely cause of customer problems downstream (low fill rate, late delivery)."
+  action: "Expedite inbound stock or reallocate between warehouses; warn the accounts that buy it."
+  provenance: computed
+- id: eta_slip_count
+  group: Signals
+  name: Supplier arrival-date slips
+  unit: count (28 days)
+  formula: "Number of times the supplier's promised arrival date moved later in the last 28 days, per product."
+  good_direction: down
+  compare: "This product's normal number of slips (usually zero)."
+  implies: "Each slip is evidence of a supplier or manufacturing delay."
+  action: "Ask procurement for a firm date and an alternative source."
+  provenance: computed
+- id: complaint_count_delta
+  group: Signals
+  name: Complaints change
+  unit: "% vs own normal"
+  formula: "Count of service, delivery and billing complaints in the last 4 weeks compared with the account's normal 4-week count."
+  good_direction: down
+  compare: "This account's own normal complaint count."
+  implies: "More complaints while orders fall means the experience got worse, not that the account got busier."
+  action: "Call back open complaints and fix the shared cause (often delivery)."
+  provenance: computed
+- id: response_time_delta
+  group: Signals
+  name: Response time change
+  unit: "% vs own normal"
+  formula: "Median hours from ticket opened to first reply, last 4 weeks, compared with the account's normal."
+  good_direction: down
+  compare: "This account's own normal first-reply time."
+  implies: "Slow replies make a supply problem feel like neglect."
+  action: "Prioritise this account's open tickets; check support capacity in its region."
+  provenance: computed
+- id: support_backlog_region
+  group: Signals
+  name: Regional SLA breaches
+  unit: per 100 tickets
+  formula: "Open tickets older than the service-level target per 100 tickets, by region."
+  good_direction: down
+  compare: "The region's own normal backlog."
+  implies: "When many accounts in one region slow down together, the cause is support capacity, not the customers."
+  action: "Add support capacity in that region."
+  provenance: computed
+- id: interaction_frequency_delta
+  group: Signals
+  name: Touchpoints change
+  unit: "% vs own normal"
+  formula: "Visits, calls and WhatsApp touchpoints in the last 4 weeks compared with the account's normal 4-week count."
+  good_direction: up
+  compare: "This account's own normal contact level."
+  implies: "Relationships fade quietly before orders fall."
+  action: "Book a visit or call; check whether the rep is still active."
+  provenance: computed
+- id: prescriber_visit_gap_days
+  group: Signals
+  name: Doctor visit gap
+  unit: days
+  formula: "Days since the last rep visit to a nephrologist linked to a hospital or clinic account, compared with that doctor's usual visit rhythm."
+  good_direction: down
+  compare: "That doctor's own usual visit rhythm."
+  implies: "Doctors who stop being visited tend to prescribe less over time."
+  action: "Book the overdue visit; assign interim cover if the rep left."
+  provenance: computed
+- id: rep_coverage_ratio
+  group: Signals
+  name: Rep coverage
+  unit: ratio
+  formula: "Active reps per account in a region compared with the portfolio norm."
+  good_direction: up
+  compare: "The portfolio-wide norm of reps per account."
+  implies: "When a rep leaves, every account they covered starts to drift."
+  action: "Assign interim cover for the uncovered accounts."
+  provenance: computed
+- id: overdue_receivable_ratio
+  group: Signals
+  name: Overdue receivables
+  unit: "share (0–1)"
+  formula: "Overdue amount owed divided by the account's billing over the last 12 weeks."
+  good_direction: down
+  compare: "This account's own normal overdue share."
+  implies: "Together with falling orders it suggests the customer is under financial stress."
+  action: "Hold a credit review call before the next dispatch."
+  provenance: computed
+- id: batch_complaint_cluster
+  group: Signals
+  name: Batch complaint cluster
+  unit: accounts
+  formula: "Quality complaints about the same batch from 2 or more different accounts within 21 days."
+  good_direction: down
+  compare: "Any cluster counts; there is no baseline for quality."
+  implies: "A possible quality pattern. Route-only: STRATA sends it to the QA Head with four-eyes approval and takes no other action."
+  action: "QA Head reviews; a second reviewer confirms. STRATA gives no clinical advice."
+  provenance: computed
+  term: four_eyes
+- id: suspected_ae_flag
+  group: Signals
+  name: Possible adverse-event report
+  unit: flag
+  formula: "A complaint whose wording matches adverse-event keywords. A routing flag only, not a medical judgement."
+  good_direction: down
+  compare: "Any flag counts."
+  implies: "A human on the QA side must see it. STRATA makes no medical decision and drafts nothing patient-facing."
+  action: "QA Head reviews with a second reviewer (four-eyes)."
+  provenance: computed
+  term: four_eyes
+- id: expiry_exposure_value
+  group: Signals
+  name: Near-expiry stock at customer
+  unit: INR
+  status: "In the catalog but not computed in this prototype (scenario S03 was cut)."
+  formula: "Rupee value of customer stock expiring within 90 days that recent sell-through says will not clear. Not computed in this prototype."
+  good_direction: down
+  compare: "Zero."
+  implies: "Would become returns and credit notes unless moved."
+  action: "None in this prototype; the signal is listed so the catalog is complete."
+  provenance: computed
+- id: feed_freshness_lag
+  group: Signals
+  name: Feed freshness lag
+  unit: "× expected interval"
+  formula: "Time since the feed last loaded divided by how often it is expected to load. Above 3 the feed is stale."
+  good_direction: down
+  compare: "The feed's own expected load interval."
+  implies: "A stale feed can fake a customer problem, so every signal from that source is paused (Data Health Guard). It never adds to risk."
+  action: "Fix the feed; signals resume when the data is fresh."
+  provenance: computed
+  term: data_health_guard
+- id: duplicate_ratio
+  group: Signals
+  name: Duplicate rows
+  unit: "share (0–1)"
+  formula: "Share of rows in the latest load that repeat an existing order key. Above 0.05 for an account pauses that account's order signals."
+  good_direction: down
+  compare: "Zero (no duplicates)."
+  implies: "Repeated rows can look like a sudden order spike; a high value means the data changed, not the customer."
+  action: "Ask the data owner to de-duplicate the load."
+  provenance: computed
+  term: data_health_guard
+
+# ---------------------------------------------------------------- case file / detection
+- id: risk_score
+  group: Detection
+  name: Risk score
+  unit: "0–100"
+  formula: "Each adverse signal gives p = weight × min(1, |robust z| / 4); combined = 1 − product of (1 − p); × source-diversity factor (1 system 0.55, 2 systems 0.80, 3+ 1.00); +5 if the pattern already met the incident level last week; capped at 69 unless 3+ systems agree."
+  good_direction: down
+  compare: "Severity bands: healthy under 30, watch 30–49, elevated 50–69, high 70–84, critical 85+."
+  implies: "How strongly independent systems agree that something is wrong. It is not a probability of losing the customer."
+  action: "50 or more opens an incident; open the case and run the investigation."
+  provenance: computed
+  term: risk_score
+- id: n_sources
+  group: Detection
+  name: Source systems agreeing
+  unit: systems
+  formula: "Number of distinct source systems (orders, inventory, support, CRM, finance, workforce) among the incident's adverse signals."
+  good_direction: neither
+  compare: "1 system scales risk by 0.55, 2 by 0.80, 3 or more by 1.00."
+  implies: "More separate systems agreeing means the pattern is less likely to be a data glitch. Fewer than 3 caps the case at elevated."
+  action: "If only one system moved, check that feed's freshness before acting."
+  provenance: computed
+  term: source_diversity
+- id: value_at_stake
+  group: Detection
+  name: Revenue exposure
+  unit: INR
+  formula: "The affected scope's normal 12-week order value (median 4-week value × 3)."
+  good_direction: neither
+  compare: "Other open incidents (used to rank them)."
+  implies: "What is at stake if the relationship is lost. It is exposure, not a forecast of loss."
+  action: "Use it to decide order of work, not to predict revenue."
+  provenance: computed
+  term: exposure
+- id: silent_period_days
+  group: Detection
+  name: Silent period
+  unit: days
+  formula: "Days from the estimated onset (change-point estimate) until an assumed weekly manual review, which flags a drop of more than 25% month on month, would catch it."
+  good_direction: neither
+  compare: "The assumed manual review, not a measured process."
+  implies: "Roughly how much earlier STRATA surfaced the problem than a simple monthly-drop check would. Based on an assumption."
+  action: "Replace the assumption with the team's real review rule if known."
+  provenance: assumption
+  term: silent_period
+- id: cause_confidence
+  group: Detection
+  name: Cause confidence
+  unit: "0–1"
+  formula: "0.6 × weighted share of the cause rule's conditions that are met + 0.4 × share of the evidence weight the cause explains (keyless mode)."
+  good_direction: up
+  compare: "The other candidate causes in the same case."
+  implies: "How well a fixed cause rule fits the evidence. It is a rule fit, not a probability."
+  action: "Below about 0.5, treat the cause as a lead and check it by hand."
+  provenance: computed
+- id: similarity
+  group: Detection
+  name: Memory similarity
+  unit: "0–1"
+  formula: "0.5 × text match (TF-IDF cosine) + 0.3 × same cause (1 or 0) + 0.2 × overlap of signal patterns (Jaccard)."
+  good_direction: up
+  compare: "Other past cases in Organizational Memory."
+  implies: "How close a past case is to this one; the closest case's steps feed the plan."
+  action: "Read the top past case and its outcome before approving."
+  provenance: computed
+  term: similarity
+- id: blast_radius_count
+  group: Detection
+  name: Blast radius
+  unit: accounts
+  formula: "Other buyers of the short product whose fill rate on that product fell below 0.92."
+  good_direction: down
+  compare: "Zero (no other account affected)."
+  implies: "The same cause is already hurting other customers who have not complained yet."
+  action: "Include these accounts in the plan; warn them before they notice."
+  provenance: computed
+  term: blast_radius
+- id: signals_checked
+  group: Briefing
+  name: Signals checked
+  unit: signals
+  formula: "Number of signal values the engine evaluated in the latest scan (accounts × signals, plus product, batch and region signals)."
+  good_direction: neither
+  compare: "Nothing; it shows coverage."
+  implies: "How much STRATA looked at to produce today's short list."
+  action: "None; read the items below."
+  provenance: computed
+- id: need_you
+  group: Briefing
+  name: Need you
+  unit: items
+  formula: "Risk items shown to your role today after the Alert Budget (at most 7 per role, ranked by exposure × confidence × urgency)."
+  good_direction: down
+  compare: "The budget of 7."
+  implies: "The problems your role should look at first today."
+  action: "Open the top item."
+  provenance: computed
+  term: alert_budget
+- id: opportunities_count
+  group: Briefing
+  name: Opportunities
+  unit: items
+  formula: "Opportunity items shown to your role today (growth with a product gap)."
+  good_direction: up
+  compare: "Nothing."
+  implies: "Positive changes worth a sales conversation."
+  action: "Open the Opportunities page and plan the visit."
+  provenance: computed
+- id: qa_routed
+  group: Briefing
+  name: Routed to QA
+  unit: incidents
+  formula: "Quality and possible adverse-event incidents routed to the QA Head."
+  good_direction: down
+  compare: "Nothing; any number needs QA attention."
+  implies: "Route-only cases: STRATA does nothing on them except make sure QA sees them, with four-eyes approval."
+  action: "QA Head reviews; a second reviewer confirms."
+  provenance: computed
+  term: four_eyes
+
+# ---------------------------------------------------------------- business health
+- id: health_index
+  group: Business health
+  name: Business Health Index
+  unit: "0–100"
+  formula: "Simple average of the five parts: customer health, supply continuity, service quality, field coverage, commercial momentum."
+  good_direction: up
+  compare: "The same index 4 weeks earlier."
+  implies: "A single summary; it hides which part moved. Always read the five parts."
+  action: "Open the part that dropped most."
+  provenance: computed
+- id: customer_health
+  group: Business health
+  name: Customer health
+  unit: "0–100"
+  formula: "100 × share of normal 12-week order value held by accounts with no elevated-or-worse risk (score under 50)."
+  good_direction: up
+  compare: "No 4-week comparison yet (shown as n/a; it would need a backtest run)."
+  implies: "A drop means more of the business sits with customers showing a multi-signal risk pattern."
+  action: "Open the Problems list sorted by exposure."
+  provenance: computed
+- id: supply_continuity
+  group: Business health
+  name: Supply continuity
+  unit: "0–100"
+  formula: "100 × portfolio fill rate over the last 4 weeks (units shipped / units ordered)."
+  good_direction: up
+  compare: "The same value 4 weeks earlier."
+  implies: "Below the high 90s usually means a supply problem we caused, not demand."
+  action: "Open supply incidents; check stock cover on short products."
+  provenance: computed
+- id: service_quality
+  group: Business health
+  name: Service quality
+  unit: "0–100"
+  formula: "100 × share of support tickets answered within the 8-hour target in the last 4 weeks."
+  good_direction: up
+  compare: "The same value 4 weeks earlier."
+  implies: "Falling compliance makes supply problems feel like neglect to customers."
+  action: "Check regional support backlog."
+  provenance: computed
+- id: field_coverage
+  group: Business health
+  name: Field coverage
+  unit: "0–100"
+  formula: "100 × touchpoints in the last 4 weeks / the portfolio's normal 4-week touchpoints, capped at 100."
+  good_direction: up
+  compare: "The same value 4 weeks earlier."
+  implies: "Relationships fade quietly before orders fall."
+  action: "Look for regions with a rep gap."
+  provenance: computed
+- id: commercial_momentum
+  group: Business health
+  name: Commercial momentum
+  unit: "0–100"
+  formula: "50 + percentage change in seasonality-adjusted units vs the normal 4-week level, kept between 0 and 100."
+  good_direction: up
+  compare: "50 means no change after seasonality."
+  implies: "Above 50 the portfolio is growing after seasonality; below 50 it is shrinking."
+  action: "If below 50, check which account types fell."
+  provenance: computed
+  term: seasonality
+- id: value_12w
+  group: Business health
+  name: 12-week order value
+  unit: INR
+  formula: "The account's normal 12-week order value (median 4-week value × 3)."
+  good_direction: neither
+  compare: "Other accounts."
+  implies: "The size of the relationship. It is exposure, not a forecast."
+  action: "Use it to prioritise attention."
+  provenance: computed
+  term: exposure
+
+# ---------------------------------------------------------------- problems / approvals / workflows
+- id: open_problems
+  group: Problems and approvals
+  name: Open problems
+  unit: incidents
+  formula: "Incidents not yet closed (any stage before Learned)."
+  good_direction: down
+  compare: "Nothing; each has a named owner role."
+  implies: "The current workload of problems and opportunities."
+  action: "Work them from the Detected and Awaiting approval columns."
+  provenance: computed
+- id: critical_high
+  group: Problems and approvals
+  name: Critical or high
+  unit: incidents
+  formula: "Open incidents in the high (70–84) or critical (85+) bands; both need 3+ systems agreeing."
+  good_direction: down
+  compare: "Open problems in total."
+  implies: "The cases with the strongest multi-system evidence."
+  action: "Open these first."
+  provenance: computed
+  term: severity_bands
+- id: approvals_waiting
+  group: Problems and approvals
+  name: Plans waiting
+  unit: plans
+  formula: "Proposed plans that no human has approved, modified or rejected yet."
+  good_direction: down
+  compare: "Nothing; every waiting plan is decision debt."
+  implies: "Nothing happens on these cases until a person decides."
+  action: "Open the oldest plan and decide."
+  provenance: computed
+  term: four_eyes
+- id: oldest_wait_hours
+  group: Problems and approvals
+  name: Longest wait
+  unit: hours
+  formula: "Hours the oldest proposed plan has been waiting, on the simulated clock."
+  good_direction: down
+  compare: "Nothing."
+  implies: "Waiting time is decision debt: the problem keeps running while the plan waits."
+  action: "Decide the oldest plan first."
+  provenance: computed
+- id: tasks_open
+  group: Problems and approvals
+  name: Open tasks
+  unit: tasks
+  formula: "Simulated tasks created by approved plans or routines that are not marked done."
+  good_direction: down
+  compare: "Nothing."
+  implies: "Work owners still have to do. Tasks are simulated; nothing is sent outside."
+  action: "Work your own tasks; mark them done."
+  provenance: computed
+- id: routines_approved
+  group: Problems and approvals
+  name: Routines approved
+  unit: routines
+  formula: "Standing routines (RT01–RT04) a human has approved once."
+  good_direction: neither
+  compare: "The 4 available routines."
+  implies: "Approved routines run only on the simulated clock and produce internal tasks, drafts and digests."
+  action: "Approve only routines you want repeated."
+  provenance: computed
+  term: standing_routine
+
+# ---------------------------------------------------------------- time-to-action
+- id: time_to_action_median
+  group: Time-to-action
+  name: Median time to action
+  unit: seconds (wall clock)
+  formula: "Median of real wall-clock seconds from the detection audit row to the approval audit row, per approved incident."
+  good_direction: down
+  compare: "The manual baseline (an illustrative figure, not measured)."
+  implies: "How quickly a person in this prototype turned a detection into an approved plan. It measures clicks in a demo, not a field process."
+  action: "Look at n before trusting it; one or two approvals say little."
+  provenance: computed
+  term: time_to_action
+- id: manual_baseline_minutes
+  group: Time-to-action
+  name: Manual baseline
+  unit: minutes
+  formula: "A fixed figure taken from the pitch deck; not measured."
+  good_direction: neither
+  compare: "STRATA's measured median."
+  implies: "Only a reference point. Do not treat the gap as a measured saving."
+  action: "Replace with the team's real number when known."
+  provenance: illustrative
+- id: tta_n
+  group: Time-to-action
+  name: Approvals measured (n)
+  unit: approvals
+  formula: "Number of incidents with both a detection row and an approval row in the audit trail."
+  good_direction: up
+  compare: "Nothing."
+  implies: "How many data points the median rests on. Small n means a fragile median."
+  action: "Approve more plans in the Lab to grow the sample."
+  provenance: computed
+
+# ---------------------------------------------------------------- evaluation
+- id: precision
+  group: Evaluation
+  name: Precision
+  unit: "% of incidents"
+  formula: "Incidents that match a planted scenario (not a decoy) divided by all incidents raised."
+  good_direction: up
+  compare: "Seed A (tuning) vs seed B (hold-out)."
+  implies: "How many raised problems were real in the synthetic data. The rest are false alarms."
+  action: "Read the false-alarm list on the Evaluation page."
+  provenance: computed
+  term: hold_out
+- id: recall
+  group: Evaluation
+  name: Recall
+  unit: "% of scenarios"
+  formula: "Planted risk and opportunity scenarios that raised an incident, divided by all planted (non-decoy) scenarios."
+  good_direction: up
+  compare: "Seed A vs seed B."
+  implies: "How many planted problems STRATA found. Misses are listed, not hidden."
+  action: "Read the missed scenarios and why."
+  provenance: computed
+  term: hold_out
+- id: root_cause_acc
+  group: Evaluation
+  name: Root-cause accuracy
+  unit: "% of detected"
+  formula: "Detected scenarios whose top-ranked cause equals the planted cause, divided by detected scenarios."
+  good_direction: up
+  compare: "Seed A vs seed B."
+  implies: "How often the cause rules point at the cause that was planted."
+  action: "Check misattributed scenarios before trusting a cause."
+  provenance: computed
+  term: hold_out
+- id: false_alarms
+  group: Evaluation
+  name: False alarms
+  unit: incidents
+  formula: "Incidents that match no planted scenario, plus incidents raised on decoys (patterns that should stay silent)."
+  good_direction: down
+  compare: "Seed A vs seed B."
+  implies: "Noise a user would have to dismiss."
+  action: "Open each listed false alarm to see why it fired."
+  provenance: computed
+- id: if_corroborated
+  group: Evaluation
+  name: ML also flagged
+  unit: scenarios
+  formula: "Planted scenarios where an IsolationForest (200 trees, 5% contamination, random_state 0, over each account's signal z-scores) also ranked the planted account among the most anomalous 5%."
+  good_direction: neither
+  compare: "The planted scenarios on each seed; it can also flag decoys."
+  implies: "Secondary corroboration only. Rules and statistics decide; the ML model never decides detection."
+  action: "Treat agreement as a sanity check, not as extra evidence in the score."
+  provenance: computed
+  term: isolation_forest
+
+# ---------------------------------------------------------------- outcomes
+- id: outcome_before
+  group: Outcomes
+  name: KPI change before the plan
+  unit: "% vs own normal"
+  formula: "The leading signal's change vs the account's own normal at the time the plan was approved."
+  good_direction: neither
+  compare: "The same KPI after the Lab fast-forward."
+  implies: "How far off normal the account was when the plan started."
+  action: "Compare with the after value."
+  provenance: computed
+- id: outcome_after
+  group: Outcomes
+  name: KPI change after (scripted)
+  unit: "% vs own normal"
+  formula: "Before value × 0.25: the Lab's scripted counterfactual reduces the planted effect by 75% after a 14-day fast-forward."
+  good_direction: neither
+  compare: "The before value."
+  implies: "Illustrative only. It shows how the loop records and learns from an outcome; it is not a measured result."
+  action: "Check the outcome was written into memory."
+  provenance: illustrative
+
+# ---------------------------------------------------------------- memory / audit / sources
+- id: memory_items
+  group: Memory and audit
+  name: Memory items
+  unit: items
+  formula: "Past incidents, SOPs, outcomes and resolutions stored in Organizational Memory."
+  good_direction: up
+  compare: "Nothing."
+  implies: "More well-written items give better precedents for future plans."
+  action: "Search memory for cases like yours."
+  provenance: computed
+- id: memory_drafts
+  group: Memory and audit
+  name: Still DRAFT
+  unit: items
+  formula: "Memory items authored 'DRAFT - TEAM TO REVIEW' (seed items no human has rewritten yet)."
+  good_direction: down
+  compare: "Memory items in total."
+  implies: "These are placeholders; the team must rewrite them before they count as company knowledge."
+  action: "Rewrite DRAFT items in your own words."
+  provenance: computed
+- id: audit_rows
+  group: Memory and audit
+  name: Audit rows
+  unit: rows
+  formula: "Rows in the hash-chained audit log (detections, agent steps, decisions, tasks, notes, routine runs)."
+  good_direction: neither
+  compare: "Nothing; 'Verified' means the chain recomputes."
+  implies: "Every decision can be traced to who or what made it and when."
+  action: "Export CSV if someone asks who decided."
+  provenance: computed
+- id: feeds_fresh
+  group: Memory and audit
+  name: Fresh feeds
+  unit: feeds
+  formula: "Source feeds whose last load is within 3× their expected interval and whose status is fresh."
+  good_direction: up
+  compare: "All connected feeds."
+  implies: "Signals from a stale feed are paused, so fewer fresh feeds means less is being judged."
+  action: "Fix stale feeds first."
+  provenance: computed
+  term: data_health_guard
+
+# ---------------------------------------------------------------- ids added by other lanes (re-scan of apps/web/src)
+- id: business_health_index
+  group: Business health
+  name: Business Health Index (page header)
+  unit: "0–100"
+  formula: "Simple average of the five parts: customer health, supply continuity, service quality, field coverage, commercial momentum. Same number as health_index."
+  good_direction: up
+  compare: "The same index 4 weeks earlier."
+  implies: "A falling index means at least one part is slipping; it does not say which."
+  action: "Open the part that dropped most."
+  provenance: computed
+- id: pillar_lowest
+  group: Business health
+  name: Lowest part of health
+  unit: "0–100"
+  formula: "The lowest of the five health parts today (each has its own formula; see that part's entry)."
+  good_direction: up
+  compare: "The same part 4 weeks earlier, and the other four parts."
+  implies: "The weakest area of the business right now, even if it did not move recently."
+  action: "Open the problems in that area."
+  provenance: computed
+- id: pillar_biggest_fall
+  group: Business health
+  name: Part that fell most
+  unit: "0–100"
+  formula: "The health part with the largest drop against 4 weeks earlier (customer health is left out: it has no 4-week comparison)."
+  good_direction: up
+  compare: "The same part 4 weeks earlier."
+  implies: "Where things are getting worse fastest, which is often where to look first."
+  action: "Open the problems behind it."
+  provenance: computed
+- id: accounts_total
+  group: Accounts
+  name: Channel accounts
+  unit: accounts
+  formula: "Count of B2B channel accounts in the synthetic dataset (all fictional)."
+  good_direction: neither
+  compare: "Account types and regions."
+  implies: "How many customers STRATA watches; each is compared with its own normal."
+  action: "None; filter by type or region to narrow the list."
+  provenance: synthetic
+- id: accounts_high_risk
+  group: Accounts
+  name: High or critical accounts
+  unit: accounts
+  formula: "Accounts whose risk score is in the high (70–84) or critical (85+) band; both need 3 or more systems agreeing."
+  good_direction: down
+  compare: "All accounts."
+  implies: "Customers where several independent systems show the same problem."
+  action: "Open the highest-risk account first."
+  provenance: computed
+  term: severity_bands
+- id: accounts_with_open_problems
+  group: Accounts
+  name: Accounts with an open problem
+  unit: accounts
+  formula: "Accounts named directly on at least one open incident."
+  good_direction: down
+  compare: "All accounts."
+  implies: "Customers already in scope of a problem. Regional, rep and batch problems can touch more accounts than this."
+  action: "Open the Problems board."
+  provenance: computed
+- id: account_value_12w
+  group: Accounts
+  name: Account revenue exposure
+  unit: INR
+  formula: "This account's normal 12-week order value (median 4-week value × 3)."
+  good_direction: neither
+  compare: "This account's own baseline; not a forecast."
+  implies: "What is at stake if the relationship degrades. It is exposure, not predicted loss."
+  action: "Use it to decide how much attention the account gets."
+  provenance: computed
+  term: exposure
+- id: adverse_signals
+  group: Accounts
+  name: Signals off normal
+  unit: signals
+  formula: "This account's signals whose robust z is 2 or more in their bad direction."
+  good_direction: down
+  compare: "All signals computed for this account."
+  implies: "Two or more adverse signals from different systems form a pattern; one alone is usually noise."
+  action: "If several are adverse, open the linked case."
+  provenance: computed
+  term: robust_z
+- id: account_open_problems
+  group: Accounts
+  name: Open problems for this account
+  unit: incidents
+  formula: "Incidents scoped to this account, or listing it in their blast radius."
+  good_direction: down
+  compare: "Nothing."
+  implies: "Problems already raised that involve this customer."
+  action: "Open the case file to see cause and plan."
+  provenance: computed
+- id: memory_learned
+  group: Memory and audit
+  name: Learned by STRATA
+  unit: items
+  formula: "Memory items authored strata-system: written by the learning loop after an outcome was recorded in the Lab."
+  good_direction: up
+  compare: "Memory items in total."
+  implies: "Shows the loop closing. The outcomes behind them are scripted (illustrative), not measured."
+  action: "Read them before reusing their steps."
+  provenance: computed
+- id: opportunity_exposure
+  group: Opportunities
+  name: Exposure across opportunities
+  unit: INR
+  formula: "Sum of the normal 12-week order value of the accounts with an open opportunity."
+  good_direction: neither
+  compare: "Nothing; it sizes the relationships."
+  implies: "The size of the relationships a cross-sell would build on. It is not a forecast of extra sales."
+  action: "Start with the largest account."
+  provenance: computed
+  term: exposure
+- id: outcomes_recorded
+  group: Outcomes
+  name: Outcomes recorded
+  unit: outcomes
+  formula: "Outcome records written after the Lab fast-forwards an approved plan by 14 simulated days."
+  good_direction: neither
+  compare: "Approved plans."
+  implies: "How many cases closed the loop in the Lab. The values are scripted, not measured."
+  action: "Check each was written to memory."
+  provenance: illustrative
+- id: outcomes_improved
+  group: Outcomes
+  name: Outcomes improved
+  unit: outcomes
+  formula: "Outcomes whose scripted after-value is closer to normal than the before-value (the Lab reduces the planted effect by 75%)."
+  good_direction: up
+  compare: "Outcomes recorded."
+  implies: "Illustrative only: shows the loop working, not a business result."
+  action: "Do not quote it as a success rate."
+  provenance: illustrative
+- id: outcomes_in_memory
+  group: Outcomes
+  name: Outcomes added to memory
+  unit: items
+  formula: "Outcome items the learning loop wrote into Organizational Memory."
+  good_direction: up
+  compare: "Outcomes recorded."
+  implies: "The next similar case will retrieve these as precedent."
+  action: "Open memory to read them."
+  provenance: illustrative
+- id: alert_shown
+  group: Briefing
+  name: Shown to you
+  unit: items
+  formula: "Items on your role's daily list after the Alert Budget (at most 7, ranked by exposure × confidence × urgency)."
+  good_direction: neither
+  compare: "The budget of 7 and the total ranked for your role."
+  implies: "The short list your role should work today, top to bottom."
+  action: "Open the top item."
+  provenance: computed
+  term: alert_budget
+- id: alert_held_back
+  group: Briefing
+  name: Held back
+  unit: items
+  formula: "Items ranked for your role that did not fit the daily budget of 7."
+  good_direction: down
+  compare: "Items shown."
+  implies: "Lower-ranked items are not hidden: they stay on the Problems board with the reason."
+  action: "Check them when the list is clear."
+  provenance: computed
+  term: alert_budget
+- id: feeds_with_duplicates
+  group: Memory and audit
+  name: Feeds with duplicates
+  unit: feeds
+  formula: "Source feeds whose last load repeated rows already seen (duplicate ratio above zero)."
+  good_direction: down
+  compare: "All connected feeds."
+  implies: "Duplicated rows can fake an order spike. Above 5% for an account, its order signals are paused."
+  action: "Ask the data owner to de-duplicate the load."
+  provenance: computed
+  term: data_health_guard
+- id: signals_catalogued
+  group: Memory and audit
+  name: Signals in the catalog
+  unit: signals
+  formula: "Signals defined in the signal catalog. Two of them (reorder interval drift, near-expiry stock) are listed but not computed in this prototype."
+  good_direction: neither
+  compare: "The regulatory-sensitive ones (QA only)."
+  implies: "Every problem cites these signals as its evidence."
+  action: "Read each signal's plain-words caption on the Sources page."
+  provenance: computed
+- id: drafts_waiting
+  group: Problems and approvals
+  name: Drafts to review
+  unit: drafts
+  formula: "WhatsApp and email drafts created by approved plans or routines for this role."
+  good_direction: down
+  compare: "Nothing."
+  implies: "Messages a person must review and send through the usual channel. STRATA never sends them."
+  action: "Review, edit and send them yourself if appropriate."
+  provenance: computed
+  term: simulated_task
+- id: audit_chain_verified
+  group: Memory and audit
+  name: Hash chain verified
+  unit: "verified / broken"
+  formula: "Each audit row stores sha256(previous row's hash + this row). Verification recomputes the whole chain and compares."
+  good_direction: neither
+  compare: "Verified (every hash recomputes) or broken (first bad row named)."
+  implies: "Verified means no row was edited or deleted after it was written. Broken means everything after the first bad row is suspect."
+  action: "If broken, find the first bad row and stop relying on later rows."
+  provenance: computed
+- id: audit_human_actions
+  group: Memory and audit
+  name: Human actions
+  unit: rows
+  formula: "Audit rows whose actor is a person (approvals, rejections, notes and other human steps)."
+  good_direction: neither
+  compare: "All audit rows."
+  implies: "STRATA never approves its own plans: every approval is a human row."
+  action: "Filter to human rows to see who decided."
+  provenance: computed
+- id: lab_steps_done
+  group: Outcomes
+  name: Lab steps done
+  unit: "of 4 steps"
+  formula: "Steps completed in this Lab run: inject, investigate, approve, fast-forward."
+  good_direction: up
+  compare: "The 4 steps of the loop."
+  implies: "How far the demo run has gone. After step 4 the outcome (illustrative) is recorded and written to memory."
+  action: "Do the next step shown on the Lab page."
+  provenance: computed
+- id: notebook_entries
+  group: Memory and audit
+  name: Notebook entries
+  unit: entries
+  formula: "Entries in the Engineering Notebook. Only people write here; STRATA never does."
+  good_direction: neither
+  compare: "Nothing."
+  implies: "How much of what the team tried is written down for the next person."
+  action: "Read the latest entry before changing the same part again."
+  provenance: computed

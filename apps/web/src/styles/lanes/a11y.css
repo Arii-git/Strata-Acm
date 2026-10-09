@@ -1,1 +1,100 @@
-/* lane: a11y - only colour tokens via var(--...) */
+/* lane: a11y (L8) - only tokens via var(--...). Loaded last, so these rules win.
+   Covers: skip link, focus ring, reduced motion, 44px targets, text-resize safe heights,
+   live-region / state copy, chart "view as table", drawer footer. */
+
+/* ---------- skip link (first focusable element; mounted in app/layout.tsx) ---------- */
+.skip-link--global {
+  position: fixed; left: var(--sp-2); top: var(--sp-2); z-index: 1000;
+  transform: translateY(calc(-100% - var(--sp-4)));
+  display: inline-flex; align-items: center; min-height: var(--control-h); padding: 0 var(--sp-4);
+  background: var(--surface); color: var(--indigo-800); border: 1px solid var(--indigo-600); border-radius: var(--r-md);
+  font-family: var(--font-brand); font-weight: 600; font-size: var(--fs-13); text-decoration: none;
+}
+.skip-link--global:focus, .skip-link--global:focus-visible { transform: none; left: var(--sp-2); top: var(--sp-2); box-shadow: var(--focus-ring); text-decoration: underline; }
+/* the global link replaces the shell's older one, so there is a single "skip" stop */
+.skip-link:not(.skip-link--global) { display: none; }
+/* the skip target is focused programmatically; no ring around the whole page */
+main[tabindex="-1"]:focus, main[tabindex="-1"]:focus-visible { outline: none; box-shadow: none; }
+
+/* ---------- focus: visible ring on every interactive element ---------- */
+:where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="tab"], [role="button"], [role="option"]):focus-visible {
+  outline: 2px solid transparent; /* shows as a real outline in Windows high-contrast mode */
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+/* segmented control clips outer shadows (overflow: hidden); draw the ring inside */
+.seg__btn:focus-visible { box-shadow: inset 0 0 0 2px var(--indigo-600), inset 0 0 0 4px var(--surface); }
+@media (forced-colors: active) {
+  :focus-visible { outline: 2px solid CanvasText; outline-offset: 2px; }
+  .pill__dot, .brand-mark { forced-color-adjust: none; }
+}
+
+/* ---------- reduced motion: no transitions or animations anywhere ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- text: selectable, wraps instead of forcing horizontal scroll ---------- */
+body { overflow-wrap: break-word; }
+::selection { background: var(--indigo-200); color: var(--ink); }
+
+/* ---------- 44px minimum targets (tokens v2 --control-h) ---------- */
+.btn, .btn--sm { height: auto; min-height: var(--control-h); }
+.btn--sm { padding: 0 var(--sp-3); font-size: var(--fs-12); }
+select, textarea,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="color"]) { min-height: var(--control-h); }
+input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; accent-color: var(--indigo-800); }
+.tabs__tab { display: inline-flex; align-items: center; min-height: var(--control-h); }
+.seg__btn { height: auto; min-height: calc(var(--control-h) - 2px); }
+.dt th button { min-height: var(--control-h); }
+.dt tbody tr.is-clickable td { height: var(--row-h); }
+.persona-select { min-height: var(--control-h); }
+/* small visual controls keep their look but get a 44px hit area */
+.term-hint__btn, button.ev-chip { position: relative; }
+.term-hint__btn::after, button.ev-chip::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, var(--control-h)); height: var(--control-h); transform: translate(-50%, -50%); }
+
+/* ---------- text-resize safe: badges grow with their text instead of clipping ---------- */
+.pill, .chip, .ev-chip { height: auto; min-height: 22px; }
+.prov { height: auto; min-height: 18px; padding: 0 var(--sp-1); }
+
+/* ---------- states: always say what to do next ---------- */
+.state__next { font-size: var(--fs-12); color: var(--ink-2); max-width: 62ch; }
+.state__next-label { font-weight: 600; color: var(--ink); }
+
+/* ---------- charts: accessible data view ---------- */
+.chart-frame__head { flex-wrap: wrap; }
+.chart-frame__plot[hidden] { display: none; }
+.chart-table { overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.chart-table table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--fs-13); font-feature-settings: var(--tnum); }
+.chart-table th, .chart-table td { height: var(--row-h-compact); padding: 0 var(--sp-3); border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.chart-table thead th { position: sticky; top: 0; background: var(--surface-2); color: var(--ink-2); font-size: var(--fs-12); font-weight: 600; }
+.chart-table tbody th { font-weight: 500; color: var(--ink); }
+.chart-table td.is-num { text-align: right; color: var(--ink); }
+.chart-table tbody tr:last-child > * { border-bottom: 0; }
+
+/* ---------- drawer ---------- */
+.drawer__title { margin: 0; }
+.drawer__foot { border-top: 1px solid var(--line); padding: var(--sp-3) var(--sp-4); }
+.drawer__head { height: auto; min-height: var(--topbar-h); }
+
+/* ---------- reflow: 1280px at 200% zoom (= 640 CSS px) without horizontal page scroll ---------- */
+@media (max-width: 1100px) {
+  .topbar { height: auto; min-height: var(--topbar-h); flex-wrap: wrap; row-gap: var(--sp-2); padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+  .topbar > * { flex-shrink: 1; min-width: 0; }
+  .topbar > .topbar__crumb { flex: 1 1 100%; }
+  .topbar__spacer { display: none; }
+}
+@media (max-width: 900px) {
+  .topbar { position: static; padding-left: var(--sp-3); padding-right: var(--sp-3); }
+  .shell__content { padding: var(--sp-4) var(--sp-3) var(--sp-6); }
+  .page-header__actions { flex-wrap: wrap; }
+  .btn { white-space: normal; text-align: center; max-width: 100%; padding-top: var(--sp-1); padding-bottom: var(--sp-1); }
+  /* the 7-step tracker becomes a vertical list */
+  .stage-tracker { grid-template-columns: minmax(0, 1fr); }
+  .stage-tracker__step { flex-direction: row; justify-content: flex-start; text-align: left; gap: var(--sp-3); }
+  .stage-tracker__step + .stage-tracker__step::before { display: none; }
+}
