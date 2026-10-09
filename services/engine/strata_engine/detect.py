@@ -277,11 +277,12 @@ def evaluate(t: dict[str, pd.DataFrame], ref_prefix: str = "INC-2026-") -> Detec
 
     # ---------------- opportunities (A11) ----------------
     nutrition = f.area_units.get("renal_nutrition")
+    area_r4 = {ar: roll4(m) for ar, m in f.area_units.items()}  # once per area, not per account
     for k, aid in enumerate(f.ids):
         aid = int(aid)
         growing = []
         for ar, m in f.area_units.items():
-            r4 = roll4(m)
+            r4 = area_r4[ar]
             x = r4[k, CUR]
             base = r4[k, 3:WEEKS - 5]
             med = float(np.nanmedian(base))

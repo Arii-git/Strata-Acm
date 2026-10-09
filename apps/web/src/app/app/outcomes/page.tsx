@@ -41,8 +41,8 @@ export default function OutcomesPage() {
       yAxis: { type: "value", axisLabel: { formatter: (v: number) => fmtPct(v) } },
       tooltip: { trigger: "axis", valueFormatter: (v) => fmtPct(Number(v)) },
       series: [
-        { name: "Before", type: "bar", data: items.map((o) => o.before_value), itemStyle: { color: "var(--chart-4)" }, label: { show: true, position: "bottom", formatter: (p) => `Before ${fmtPct(Number(p.value))}` } },
-        { name: "After (scripted)", type: "bar", data: items.map((o) => o.after_value), itemStyle: { color: "var(--chart-1)" }, label: { show: true, position: "bottom", formatter: (p) => `After ${fmtPct(Number(p.value))}` } },
+        { name: "Before", type: "bar", data: items.map((o) => o.before_value), itemStyle: { color: "var(--chart-4)" }, label: { show: true, position: "bottom", formatter: (p) => `Before\n${fmtPct(Number(p.value))}`, fontSize: 11, lineHeight: 14 } },
+        { name: "After (scripted)", type: "bar", data: items.map((o) => o.after_value), itemStyle: { color: "var(--chart-1)" }, label: { show: true, position: "bottom", formatter: (p) => `After\n${fmtPct(Number(p.value))}`, fontSize: 11, lineHeight: 14 } },
       ],
     };
   }, [items]);

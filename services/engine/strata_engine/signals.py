@@ -269,14 +269,14 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
         med, smad, z = robust(x, ratio[:, base_slice], floor_abs)
         z_prev = (ratio[:, CUR - 1] - med) / smad
         with np.errstate(divide="ignore", invalid="ignore"):
-            wk = np.where(den > 0, num / den, np.nan)
+            wk = np.nan_to_num(np.where(den > 0, num / den, np.nan), nan=0.0)
         for k, aid in enumerate(f.ids):
             if int(aid) in suppressed_order_accounts or not np.isfinite(x[k]):
                 continue
             out[int(aid)].append(Sig(
                 id=f"EV-{aid}-{key}", signal_key=key, scope="account", scope_key=str(aid), account_id=int(aid),
                 value=float(x[k]), baseline=float(med[k]), robust_z=float(z[k]),
-                delta=float(x[k] - med[k]), series=series_for(f, np.nan_to_num(wk, nan=0.0), k, med[k]),
+                delta=float(x[k] - med[k]), series=series_for(f, wk, k, med[k]),
                 extra={"z_prev": float(z_prev[k])} if np.isfinite(z_prev[k]) else {}))
 
     ratio_signal("fill_rate", f.filled, f.units, 0.01)
@@ -297,6 +297,7 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
     idx = g4.index.to_frame().to_numpy().astype(int)
     resp[idx[:, 0], idx[:, 1]] = g4.to_numpy()
     x = resp[:, CUR]
+    wk_med0 = np.nan_to_num(wk_med, nan=0.0)
     med, smad, z = robust(x, resp[:, base_slice], 0.0)
     z_prev_r = (resp[:, CUR - 1] - med) / smad
     delta = x / med - 1
@@ -306,7 +307,7 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
                 id=f"EV-{aid}-response_time_delta", signal_key="response_time_delta", scope="account",
                 scope_key=str(aid), account_id=int(aid), value=float(x[k]), baseline=float(med[k]),
                 robust_z=float(z[k]), delta=float(delta[k]),
-                series=series_for(f, np.nan_to_num(wk_med, nan=0.0), k, med[k]),
+                series=series_for(f, wk_med0, k, med[k]),
                 extra={"z_prev": float(z_prev_r[k])} if np.isfinite(z_prev_r[k]) else {}))
     f.resp_window = resp
 
@@ -327,13 +328,14 @@ def account_signals(f: Frames, suppressed_order_accounts: set[int] | None = None
     x = ratio[:, CUR]
     med, smad, z = robust(x, ratio[:, 12:BASE_END + 1], 0.15)
     z_prev_o = (ratio[:, CUR - 1] - med) / smad
+    ratio0 = np.nan_to_num(ratio, nan=0.0)
     for k, aid in enumerate(f.ids):
         if np.isfinite(x[k]):
             out[int(aid)].append(Sig(
                 id=f"EV-{aid}-overdue_receivable_ratio", signal_key="overdue_receivable_ratio", scope="account",
                 scope_key=str(aid), account_id=int(aid), value=float(x[k]), baseline=float(med[k]),
                 robust_z=float(z[k]), delta=float(x[k] - med[k]),
-                series=series_for(f, np.nan_to_num(ratio, nan=0.0), k, med[k]),
+                series=series_for(f, ratio0, k, med[k]),
                 extra={"z_prev": float(z_prev_o[k])} if np.isfinite(z_prev_o[k]) else {}))
 
     # prescriber visit gap (hospital / clinic accounts with linked prescribers)
