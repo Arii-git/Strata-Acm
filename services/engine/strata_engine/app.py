@@ -74,8 +74,10 @@ class Engine:
 def inject(t: dict[str, pd.DataFrame], inj: dict[str, Any]) -> dict[str, pd.DataFrame]:
     """Lab injector (A12): applies the hero pattern (S01 template) to a COPY of the facts for one account.
     Acts like a data source; the engine still detects from rows, never from labels."""
-    aid = int(inj["account_id"])
     t = dict(t)
+    if inj.get("template") == "S13":
+        return inject_stale_feed(t)
+    aid = int(inj["account_id"])
     cut = pd.Timestamp(D0 - timedelta(days=28))
     o = t["orders"].copy()
     m = (o["account_id"] == aid) & (pd.to_datetime(o["order_date"]) >= cut)
@@ -107,6 +109,25 @@ def inject(t: dict[str, pd.DataFrame], inj: dict[str, Any]) -> dict[str, pd.Data
     mi = (i["account_id"] == aid) & (pd.to_datetime(i["occurred_at"]) >= cut)
     drop = i[mi].iloc[::2].index
     t["account_interactions"] = i.drop(index=drop)
+    return t
+
+
+def inject_stale_feed(t: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
+    """S13 decoy (Lab only): orders feed last ingested 9 h ago with 14% duplicate rows for 20 accounts.
+    The Data Health Guard must pause order-derived judgement instead of raising incidents."""
+    feeds = t["source_feeds"].copy()
+    m = feeds["system"] == "orders"
+    feeds.loc[m, "last_ingested_at"] = SIM_NOW - timedelta(hours=9)
+    feeds.loc[m, "duplicate_ratio"] = 0.14
+    feeds.loc[m, "status"] = "degraded"
+    t["source_feeds"] = feeds
+    o = t["orders"]
+    accs = sorted(o["account_id"].unique())[5:25]
+    last = o[(o["account_id"].isin(accs)) & (pd.to_datetime(o["order_date"]) >= pd.Timestamp(D0 - timedelta(days=7)))]
+    dup = last.copy()
+    dup["id"] = o["id"].max() + 1 + np.arange(len(dup))
+    t["orders"] = pd.concat([o, dup], ignore_index=True)
+    t["duplicate_ratio_by_account"] = pd.DataFrame({"account_id": accs, "duplicate_ratio": [0.14] * len(accs)})
     return t
 
 
@@ -626,7 +647,7 @@ def portfolio_health() -> dict[str, Any]:
         mix.append({"type": t_, "label": TYPE_LABEL[t_], "count": int(len(g)), "value_12w": round(sum(E().det.value_12w[int(a)] for a in g.index), 2)})
     wk = slice(WEEKS - 12, WEEKS)
     return {"index": {"value": round(idx, 1), "delta_4w": round(idx - idx_prev, 1), "provenance": "computed"}, "pillars": pil, "movers": movers[:6],
-            "activity": {"weeks": f.week_labels[wk], "orders": [int(x) for x in f.n_lines.sum(axis=0)[wk]],
+            "activity": {"weeks": f.week_labels[wk], "orders": [int(x) for x in f.units.sum(axis=0)[wk]],
                          "tickets": [int(x) for x in f.tickets.sum(axis=0)[wk]], "visits": [int(x) for x in f.visits.sum(axis=0)[wk]]},
             "mix": mix}
 
@@ -753,11 +774,23 @@ def lab_reset() -> dict[str, Any]:
 
 class InjectIn(BaseModel):
     account_id: int | None = None
+    template: str = "S01"
 
 
 @app.post("/lab/inject")
 def lab_inject(body: InjectIn) -> dict[str, Any]:
     e = E()
+    if body.template == "S13":
+        run_id = f"LAB-{len(e.injections) + 1:03d}"
+        before = {i.ref for i in e.det.incidents}
+        inj = {"account_id": -1, "template": "S13", "run_id": run_id}
+        e.injections.append(inj)
+        state.put("lab_injections", run_id, inj)
+        state.audit("human", "lab", "lab.inject", "feed", "orders", {"template": "S13 stale + duplicated orders feed", "run_id": run_id})
+        e.refresh()
+        return {"run_id": run_id, "template": "S13", "notices": e.det.notices,
+                "new_incidents": [i.ref for i in e.det.incidents if i.ref not in before],
+                "message": "Orders feed marked stale with duplicate rows. Data Health Guard paused order-derived signals; see Sources & Signals."}
     aid = body.account_id
     if aid is None:
         busy = {i.account_id for i in e.det.incidents} | {x["account_id"] for x in e.injections}
