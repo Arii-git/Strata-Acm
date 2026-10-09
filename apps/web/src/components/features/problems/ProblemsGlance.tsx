@@ -15,10 +15,9 @@ export function ProblemsGlance({ rows }: { rows: ProblemRow[] }) {
         id="open_problems"
         label="Open problems"
         value={fmtNum(open.length)}
-        unit={open.length === 1 ? "problem" : "problems"}
-        compare={`across all roles; ${fmtNum(qa)} routed to QA`}
-        meaning="Risks STRATA raised that have not yet reached the Learned stage."
-        implication="Each one has an owner role; the board shows where it is stuck."
+        compare={`${fmtNum(qa)} routed to QA`}
+        meaning="Raised and not yet at Learned."
+        implication="Each has an owner role."
         provenance="computed"
         next={{ label: "See the list", href: "/app/problems?view=list" }}
       />
@@ -27,9 +26,8 @@ export function ProblemsGlance({ rows }: { rows: ProblemRow[] }) {
         label="Critical or high"
         value={fmtNum(hot.length)}
         unit={`of ${fmtNum(open.length)}`}
-        compare="open problems at the top two severity levels"
-        meaning="Problems where several source systems agree something is badly off its normal."
-        implication={hot.length ? "Open these first; they carry the most ₹ exposed." : "Nothing urgent; work the watch-level items when you can."}
+        meaning="Several systems agree something is badly off normal."
+        implication={hot.length ? "Open these first." : "Nothing urgent right now."}
         provenance="computed"
         tone={hot.length ? "critical" : "default"}
         next={{ label: "Show them", href: "/app/problems?view=list&minsev=high" }}
@@ -38,9 +36,7 @@ export function ProblemsGlance({ rows }: { rows: ProblemRow[] }) {
         id="opportunities_count"
         label="Opportunities"
         value={fmtNum(opps.length)}
-        unit={opps.length === 1 ? "opportunity" : "opportunities"}
-        compare="positive changes, counted apart from problems"
-        meaning="Accounts growing in related lines that do not buy a complementary line."
+        meaning="Accounts growing in related lines, counted apart from problems."
         implication="A cross-sell visit is the usual first step."
         provenance="computed"
         next={{ label: "Open opportunities", href: "/app/opportunities" }}

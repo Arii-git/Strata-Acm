@@ -1,0 +1,70 @@
+# STRATA: engine (FastAPI :8000) + web (Next.js :3000). Guide: docs/DOCKER.md
+#   copy .env.example .env      (optional; everything runs keyless)
+#   docker compose up --build   -> http://localhost:3000
+# Requires Docker Compose v2.24+ (for `env_file: required: false`). Docker Desktop ships a newer one.
+name: strata
+
+services:
+  engine:
+    build:
+      context: .
+      dockerfile: services/engine/Dockerfile
+    image: strata-engine:local
+    restart: unless-stopped
+    # Everything in .env reaches the engine: STRATA_*, SIM_NOW, LLM_*, SMTP_*, APP_URL, GEMINI_API_KEY,
+    # GEMINI_MODEL, STRATA_AUTH_SECRET, STRATA_ADMIN_KEY ...
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Fixed container paths (override anything in .env; the seed scripts always write to /app/data/store).
+      STRATA_STORE_DIR: /app/data/store
+      STRATA_STATE_DB: /app/data/store/state.db
+      # Links in emails should point at the web container's published port.
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      # Bare names = also forwarded from your shell if set there (a value in .env is used otherwise).
+      GEMINI_API_KEY:
+      GEMINI_MODEL:
+      STRATA_AUTH_SECRET:
+      STRATA_ADMIN_KEY:
+      SMTP_HOST:
+      SMTP_PORT:
+      SMTP_USER:
+      SMTP_PASSWORD:
+      SMTP_FROM:
+    ports:
+      - "${ENGINE_PORT:-8000}:8000"
+    volumes:
+      # Synthetic data (pickles), eval report, and the state DB (users, companies, audit) survive restarts.
+      # Wipe with: docker compose down -v
+      - strata-store:/app/data/store
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 600s # first boot generates the data (~1-2 min) before uvicorn starts
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Baked into the build (Next.js resolves rewrites at build time). "engine" = the service name above.
+        ENGINE_URL: http://engine:8000
+    image: strata-web:local
+    restart: unless-stopped
+    # No env_file on purpose: the web container needs no secrets.
+    environment:
+      ENGINE_URL: http://engine:8000
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      engine:
+        condition: service_healthy
+
+volumes:
+  strata-store:

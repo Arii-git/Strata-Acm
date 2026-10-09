@@ -16,3 +16,4 @@ export { CategoryChip, CategoryIcon, CATEGORY_ICON } from "./CategoryChip";
 export { StageTracker, stageLabel } from "./StageTracker";
 export { EventRow, type EventItem } from "./EventRow";
 export { TermHint } from "./TermHint";
+export { StrataLoader, type StrataLoaderProps } from "./Loader";

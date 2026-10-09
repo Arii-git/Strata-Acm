@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { EChartsOption, EChartsType } from "echarts";
+import { useTheme } from "@/lib/theme";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), {
   ssr: false,
@@ -239,7 +240,13 @@ export function EChart({ option, height = "100%", ariaLabel, onEvents }: EChartP
   const inst = useRef<EChartsType | null>(null);
   const [shown, setShown] = useState(false);
   const [theme, setTheme] = useState<Record<string, unknown> | null>(null);
-  useEffect(() => { setTheme(buildChartTheme()); }, []);
+  // light/dark: rebuild the token theme (and re-resolve var(--x) in the option) whenever the theme flips.
+  // Read on the next frame so <html data-theme> is already updated when the tokens are read.
+  const { resolved } = useTheme();
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setTheme(buildChartTheme()));
+    return () => cancelAnimationFrame(raf);
+  }, [resolved]);
   const opt = useMemo(() => (theme ? withDefaults(option) : null), [option, theme]);
 
   const report = ctx.report;
@@ -283,6 +290,7 @@ export function EChart({ option, height = "100%", ariaLabel, onEvents }: EChartP
     <div ref={wrap} role="img" aria-label={label} aria-describedby={ctx.describedBy} style={{ height, width: "100%", minWidth: 0 }}>
       {shown && theme && opt ? (
         <ReactECharts
+          key={resolved}
           option={opt}
           theme={theme}
           notMerge

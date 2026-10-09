@@ -30,11 +30,11 @@ export function ConsequencePanel({ incident, plan }: { incident: WbIncident; pla
         <p className="caption" style={{ margin: 0 }}>
           {expected === NO_BASIS
             ? "No past case with the same cause is in memory, so STRATA makes no prediction."
-            : "This is what happened in the most similar past case with the same cause. It is a reference, not a forecast; STRATA does not predict a recovery time or a rupee saving."}
+            : "The closest past case with the same cause. A reference, not a forecast."}
         </p>
       </div>
       <ul className="consequence-panel__rules">
-        <li>If you reject or modify: a reason is required. A rejection reason is stored in memory as negative evidence and shown next time; a modification reason is recorded with your decision in the audit trail.</li>
+        <li>Reject or modify: a reason is required. A rejection is remembered for next time; a change is kept in the audit trail.</li>
         {incident.regulatory_sensitive ? (
           <li data-testid="route-only"><b>Route-only: QA Head approves, a second QA reviewer confirms (four-eyes). STRATA gives no clinical advice.</b></li>
         ) : null}

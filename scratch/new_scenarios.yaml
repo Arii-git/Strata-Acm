@@ -1,0 +1,34 @@
+  - id: S05
+    title: "Supply chain disruption due to natural disaster"
+    kind: risk
+    truth_cause: natural_disaster
+    accounts: ["selector: 2 accounts in different regions"]
+    onset_days_before_now: 7
+    injected:
+      - {table: warehouse_stock, effect: "stock_cover_days drops rapidly as inbound shipments are halted"}
+      - {table: orders, effect: "fill rate drops to 30% for all SKUs"}
+      - {table: support/complaints, effect: "general complaints increase by 60%"}
+    expected: {detected: true, severity: critical, cause: natural_disaster, action_family: "allocate emergency stock and communicate delay"}
+
+  - id: S06
+    title: "Late shipment pattern across a region"
+    kind: risk
+    truth_cause: late_shipment
+    accounts: ["selector: 4 accounts in Delhi NCR"]
+    onset_days_before_now: 14
+    injected:
+      - {table: orders, effect: "delivery delays increase by 3 days on average"}
+      - {table: support/complaints, effect: "delivery complaints up by 40%"}
+    expected: {detected: true, severity: elevated, cause: late_shipment, min_sources: 2}
+
+  - id: S07
+    title: "Damage during delivery affecting fragile goods"
+    kind: risk
+    truth_cause: damage_in_transit
+    accounts: ["selector: 3 accounts in Punjab"]
+    onset_days_before_now: 10
+    injected:
+      - {table: support/complaints, effect: "quality/damage complaints spike by 80% for fragile SKUs"}
+      - {table: orders, effect: "return rate increases by 15%"}
+    expected: {detected: true, severity: high, cause: damage_in_transit, min_sources: 2}
+

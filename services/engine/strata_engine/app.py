@@ -1095,3 +1095,23 @@ def taxonomy() -> dict[str, Any]:
     from .taxonomy import CATEGORIES, STAGES
     return {"categories": [{"key": c, "label": CATEGORY_LABEL[c]} for c in CATEGORIES],
             "stages": [{"key": s, "label": STAGE_LABEL[s]} for s in STAGES]}
+
+
+# ------------------------------------------------------------------ night-build routers (each module owns its own APIRouter)
+def _mount_routers() -> None:
+    import importlib
+    import logging
+    for name in ("auth", "mailer", "agentic", "assistant", "digest", "simulation"):
+        try:
+            mod = importlib.import_module(f".{name}", __package__)
+        except ModuleNotFoundError as exc:
+            if exc.name and exc.name.endswith(name):
+                continue  # module not built yet
+            raise
+        r = getattr(mod, "router", None)
+        if r is not None:
+            app.include_router(r)
+        logging.getLogger("strata").info("mounted router %s", name)
+
+
+_mount_routers()

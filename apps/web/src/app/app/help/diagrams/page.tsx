@@ -126,7 +126,7 @@ export default function DiagramGalleryPage() {
           {hero.data && catalog.data ? <NoisyOrDiagram witnesses={witnesses} engineScore={hero.data.risk_score} /> : <NoisyOrDiagram />}
         </Section>
 
-        <Section id="channel" title="5. Channel map and blast radius" caption={`Altygen → stockists → chemist chains, hospital pharmacies and clinics (account types only), with ${HERO}'s affected type and exposed accounts.`} provenance="computed">
+        <Section id="channel" title="5. Channel map and blast radius" caption={`the client → stockists → chemist chains, hospital pharmacies and clinics (account types only), with ${HERO}'s affected type and exposed accounts.`} provenance="computed">
           {hero.data && accounts.data ? (
             <ChannelMap accountType={hero.data.account_type} accountName={hero.data.account_name} blast={hero.data.blast_radius} typeById={typeById} />
           ) : null}

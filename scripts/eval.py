@@ -91,7 +91,7 @@ if __name__ == "__main__":
     store = ROOT / "data" / "store"
     runs = [run(store / "seed_dev", False), run(store / "seed_holdout", True)]
     out = {"runs": runs, "caveat": "Seed B (hold-out) uses the same generator and scenarios with a different random draw. It guards against "
-           "over-fitting to one sample; it is NOT independent validation. Real validation needs Altygen data.",
+           "over-fitting to one sample; it is NOT independent validation. Real validation needs real company data.",
            "lead_time": "Not computed in this build (needs a weekly backtest); listed as a known gap.",
            "isolation_forest": "Secondary corroboration only: IsolationForest (200 trees, 5% contamination, random_state 0) over each account's signal z-scores. if_flagged = the unsupervised model also ranked a planted account among the most anomalous 5%. It never decides detection."}
     (store / "eval_latest.json").write_text(json.dumps(out, indent=2, default=lambda o: float(o) if isinstance(o, np.floating) else str(o)))

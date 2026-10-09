@@ -1,7 +1,7 @@
 {
   "name": "strata",
   "private": true,
-  "description": "STRATA Operational Intelligence Console - The Industry Games 2026 prototype for Altygen Biopharm (synthetic data)",
+  "description": "STRATA Operational Intelligence Console - The Industry Games 2026 prototype (synthetic data)",
   "scripts": {
     "setup": "node scripts/py.mjs --setup && npm --prefix apps/web install && node scripts/py.mjs scripts/seed.py && node scripts/py.mjs scripts/eval.py",
     "seed": "node scripts/py.mjs scripts/seed.py",

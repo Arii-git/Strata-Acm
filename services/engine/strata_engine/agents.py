@@ -260,7 +260,7 @@ def build_plan(inc: Incident, top: Hypothesis, mm: list[MemoryMatch], sops: list
     if not inc.regulatory_sensitive and inc.account_id:
         vol = next((e for e in inc.evidence if e.signal_key == "order_volume_delta"), None)
         drafts.append({"channel": "whatsapp_draft", "to_role": "account_manager", "subject": f"Check-in with {acc_name}",
-                       "body": "Hello, this is your Altygen account team. We know recent supplies of some items were short and replies were slower than usual. "
+                       "body": "Hello, this is your account team. We know recent supplies of some items were short and replies were slower than usual. "
                                "We have prioritised your pending orders and will call you today to agree interim supply. (Draft, simulated, not sent.)",
                        "simulated": True, "evidence_ids": [vol.id] if vol else ev_ids[:1]})
         if cause == "supplier_delay":

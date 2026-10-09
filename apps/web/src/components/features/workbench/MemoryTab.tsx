@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { MemoryMatch } from "@/lib/api/types";
-import { Card, DataTable, Details, EmptyState, StatusPill, type ColumnDef } from "@/components/ui";
+import { DataTable, Details, EmptyState, StatusPill, type ColumnDef } from "@/components/ui";
 import { SimilarityBars } from "@/components/diagrams/SimilarityBars";
 import { humanize } from "@/lib/format";
 import { DRAFT_AUTHOR, MEMORY_NOTE } from "./shared";
@@ -13,6 +13,7 @@ export function AuthorCell({ author }: { author: string }) {
   return <span>{author}</span>;
 }
 
+/** Similar past cases and procedures: the similarity bars up front, the full table behind a disclosure. */
 export function MemoryTab({ matches, retrieval }: { matches: MemoryMatch[] | null; retrieval?: string }) {
   const cols = useMemo<ColumnDef<MemoryMatch>[]>(() => [
     { id: "ref", header: "Ref", accessorKey: "ref" },
@@ -31,22 +32,24 @@ export function MemoryTab({ matches, retrieval }: { matches: MemoryMatch[] | nul
     { id: "authored_by", header: "Authored by", accessorKey: "authored_by", cell: (c) => <AuthorCell author={c.row.original.authored_by} /> },
   ], []);
 
-  if (!matches) return <EmptyState title="No memory retrieved yet" body="Run the investigation to retrieve similar past incidents and SOPs." />;
+  if (!matches) return <EmptyState title="No memory retrieved yet" body="Run the investigation to retrieve similar past cases and procedures." />;
 
   return (
-    <Card title="What did we do last time?" actions={<span className="chip chip--mono">retrieval: {retrieval ?? "tfidf"}</span>}>
+    <div className="stack" style={{ gap: "var(--sp-3)" }}>
       <SimilarityBars matches={matches} />
-      <p className="caption">{MEMORY_NOTE}</p>
-      <Details title={`All ${matches.length} matches as a table (resolution, outcome, author)`}>
+      <p className="caption" style={{ margin: 0 }}>
+        {MEMORY_NOTE} <span className="chip chip--mono">retrieval: {retrieval ?? "tfidf"}</span>
+      </p>
+      <Details title={`Show details: all ${matches.length} matches`}>
         <DataTable
           columns={cols}
           data={matches}
           provenance="computed"
-          caption="What it is: past incidents and SOPs most similar to this one, scored 0.5 x text similarity (TF-IDF) + 0.3 x same cause + 0.2 x same signal pattern. What it implies: resolutions with a retained outcome are the ones the plan borrows from; 'lost' rows show what not to repeat."
+          caption="Past cases and procedures most like this one: 0.5 × text similarity (TF-IDF) + 0.3 × same cause + 0.2 × same signal pattern. Rows with a retained outcome are what the plan borrows from; 'lost' rows show what not to repeat."
           initialSort={[{ id: "similarity", desc: true }]}
           emptyText="No similar records found."
         />
       </Details>
-    </Card>
+    </div>
   );
 }

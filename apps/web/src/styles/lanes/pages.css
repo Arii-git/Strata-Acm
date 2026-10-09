@@ -21,3 +21,8 @@
 
 /* 44px targets for selects and inputs on these pages */
 .page-template input[type="search"], .page-template input[type="text"], .page-template select { min-height: var(--control-h); }
+
+/* ---------- Page enter animation ---------- */
+.page-enter { animation: page-fade-in 280ms var(--ease) both; }
+@keyframes page-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .page-enter { animation: none; } }

@@ -49,14 +49,14 @@ export function DecisionResult({ result, incident }: { result: DecisionOutcome; 
       ) : (
         <p className="caption" style={{ margin: 0 }}>
           {result.decision === "rejected"
-            ? "No tasks were created. Re-run the investigation on the Why tab to draft a new plan."
+            ? "No tasks were created. Re-run the investigation (Investigate step) to draft a new plan."
             : "No tasks yet: a second, different approver must confirm before anything is created."}
         </p>
       )}
       {result.response.tasks_created > 0 ? (
         <div className="row" style={{ flexWrap: "wrap" }}>
           <Link href="/app/workflows" className={buttonClass("secondary", "sm")}>Open Workflows &amp; handoffs</Link>
-          <span className="caption">Next: owners work these tasks; the outcome is checked when they fall due.</span>
+          <span className="caption">Owners work these tasks; the result is checked when they fall due.</span>
         </div>
       ) : null}
     </section>

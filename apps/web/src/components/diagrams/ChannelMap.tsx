@@ -15,7 +15,7 @@ export interface ChannelBlastRow { account_id: string | number; exposure_value: 
 interface Box { key: string; label: string; x: number; y: number; w: number; h: number }
 
 /**
- * Channel map: Altygen → stockists → chemist chains / hospital pharmacies / clinics (account TYPES only, no
+ * Channel map: the client → stockists → chemist chains / hospital pharmacies / clinics (account TYPES only, no
  * individual accounts). The affected account's type is outlined and labelled; each type shows how many
  * blast-radius accounts are exposed and their baseline 12-week order value.
  */
@@ -32,7 +32,7 @@ export function ChannelMap({
     exposed[t].value += b.exposure_value || 0;
   }
   const boxes: Box[] = [
-    { key: "altygen", label: "Altygen Biopharm", x: 8, y: 96, w: 150, h: 60 },
+    { key: "maker", label: "Manufacturer", x: 8, y: 96, w: 150, h: 60 },
     { key: STOCKIST.key, label: STOCKIST.label, x: 210, y: 96, w: 180, h: 60 },
     ...CHANNEL_TYPES.map((t, i) => ({ key: t.key, label: t.label, x: 460, y: 8 + i * 88, w: 252, h: 60 })),
   ];
@@ -40,11 +40,11 @@ export function ChannelMap({
   const mid = (b: Box) => b.y + b.h / 2;
   const st = by[STOCKIST.key];
   const edges = [
-    `M ${by.altygen.x + by.altygen.w} ${mid(by.altygen)} H ${st.x}`,
+    `M ${by.maker.x + by.maker.w} ${mid(by.maker)} H ${st.x}`,
     ...CHANNEL_TYPES.map((t) => `M ${st.x + st.w} ${mid(st)} H 425 V ${mid(by[t.key])} H ${by[t.key].x}`),
   ];
   const lineFor = (key: string): string[] => {
-    if (key === "altygen") return ["manufacturer"];
+    if (key === "maker") return ["manufacturer"];
     const out: string[] = [];
     if (key === accountType) out.push(`Affected: ${accountName ? "this account" : "this case"}`);
     const e = exposed[key];

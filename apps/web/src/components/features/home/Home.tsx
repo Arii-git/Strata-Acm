@@ -2,140 +2,154 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  IconBuildingStore, IconChecklist, IconCircleCheck, IconCircle, IconListSearch, IconMapRoute, IconNews, IconRadar,
-  IconSitemap, IconTrendingUp, type Icon,
-} from "@tabler/icons-react";
-import { buttonClass } from "@/components/ui/Button";
-import { apiGet, qs } from "@/lib/api/client";
-import type { PersonaKey } from "@/lib/api/types";
-import { useFeatures } from "@/lib/features";
-import { PERSONAS, usePersona } from "@/lib/persona";
+import { IconFlask, IconInfoCircle, IconMapRoute, IconNews } from "@tabler/icons-react";
+import { ErrorState, ExplainDrawer, Metric, MetricGroup, buttonClass } from "@/components/ui";
+import { StrataLoader } from "@/components/ui/Loader";
 import { useGuided } from "@/components/features/guided";
+import { qs, useApi } from "@/lib/api/client";
+import { useAuth } from "@/lib/auth";
+import { useFeatures } from "@/lib/features";
+import { fmtDate, fmtINR, fmtNum } from "@/lib/format";
+import { usePersona } from "@/lib/persona";
+import { TypedText, useActiveSection } from "./motion";
+import { MissedSection, NumbersSection, PeriodSection, PipelineSection, TrendsSection } from "./HomeSections";
+import { numberById, type BriefingLive, type Digest } from "./types";
+import { useLastVisit } from "./useLastVisit";
 
-/** What each persona sees (mirrors the engine's visible_to rule in app.py). */
-export const PERSONA_LINES: Record<PersonaKey, string> = {
-  operations_manager: "Every problem and opportunity; supply, stock and data-feed problems are yours to own.",
-  account_manager: "Problems on single customer accounts, such as falling orders or overdue payments.",
-  sales_manager: "Growth opportunities, plus anything you own.",
-  support_manager: "Anything involving support tickets: slow replies and rising complaints.",
-  business_head: "Every problem and opportunity across the business.",
-  qa_head: "Quality and possible patient-safety reports. These go only to you, with a second reviewer.",
-};
+const TOC: { id: string; label: string }[] = [
+  { id: "home-today", label: "Today" },
+  { id: "home-yesterday", label: "Yesterday" },
+  { id: "home-week", label: "Last 7 days" },
+  { id: "home-pipeline", label: "Pipeline" },
+  { id: "home-trends", label: "Trends" },
+  { id: "home-numbers", label: "Numbers" },
+  { id: "home-missed", label: "Missed" },
+];
 
-export function WelcomeCard() {
+function firstName(name: string | null | undefined): string | null {
+  const n = (name ?? "").trim().split(/\s+/)[0];
+  return n || null;
+}
+
+/** 2–3 plain sentences, every number taken from /briefing and /digest (no free text, no LLM). */
+function summaryText(b: BriefingLive, today: Digest | null): string {
+  const s1 = `Overnight I checked ${fmtNum(b.signals_checked)} signals across ${fmtNum(b.accounts_count)} accounts and ${fmtNum(b.sources_count)} source systems.`;
+  const s2 = today?.headline ?? b.summary;
+  const top = b.priorities.find((p) => p.kind === "risk") ?? b.priorities[0];
+  const s3 = top ? `The first thing to look at: ${top.title}.` : "Nothing crossed the thresholds for your role.";
+  return `${s1} ${s2} ${s3}`;
+}
+
+function Toc() {
+  const active = useActiveSection(TOC.map((t) => t.id));
+  return (
+    <nav className="home-toc" aria-label="On this page">
+      <ol>
+        {TOC.map((t) => (
+          <li key={t.id}>
+            <a href={`#${t.id}`} className={`home-toc__link${active === t.id ? " is-active" : ""}`} aria-current={active === t.id ? "location" : undefined}>
+              <span className="home-toc__dot" aria-hidden="true" />
+              <span className="home-toc__label">{t.label}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+function Hero({ briefing, today }: { briefing: BriefingLive; today: Digest | null }) {
+  const { user } = useAuth();
   const { label } = usePersona();
   const { has, loaded } = useFeatures();
   const guided = useGuided();
+  const [explain, setExplain] = useState(false);
+  const who = firstName(user?.name) ?? label;
+  const open = numberById(today, "open_problems");
+  const exposure = numberById(today, "value_at_stake");
+  const waiting = numberById(today, "approvals_waiting");
+
   return (
-    <section className="card home-welcome" aria-labelledby="home-welcome-title" data-testid="home-welcome">
-      <div className="home-welcome__mark" aria-hidden="true"><span className="brand-mark" /></div>
-      <div className="home-welcome__body">
-        <h2 id="home-welcome-title" className="home-welcome__title">Welcome, {label}.</h2>
-        <p className="home-welcome__text">
-          I&apos;m STRATA. I watch your business data, flag problems early, explain them, and only act when you approve.
-          Where would you like to start?
+    <section id="home-today" className="home-hero" aria-labelledby="home-hero-title" data-testid="home-welcome">
+      <div className="home-hero__top">
+        <p className="home-hero__kicker">
+          {fmtDate(today?.as_of ?? briefing.sim_now)}{user?.company_name ? ` · ${user.company_name}` : ""} · {briefing.role_label}
         </p>
-        <div className="row home-welcome__actions">
-          <Link href="/app/briefing" className={buttonClass("secondary")} data-testid="show-briefing">
-            <IconNews size={18} stroke={1.5} aria-hidden="true" /> Show today&apos;s briefing
-          </Link>
-          {loaded && has("A23") ? (
-            <button type="button" className={buttonClass("primary")} onClick={() => void guided.start()} disabled={guided.starting} data-testid="start-guided">
-              <IconMapRoute size={18} stroke={1.5} aria-hidden="true" /> {guided.starting ? "Finding the top case…" : "Take the guided path"}
-            </button>
-          ) : null}
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => setExplain(true)} data-testid="explain-button">
+          <IconInfoCircle size={16} stroke={1.5} aria-hidden="true" /> About this page
+        </button>
+      </div>
+      <h1 id="home-hero-title" className="home-hero__title">{briefing.greeting}, {who}.</h1>
+      <TypedText className="home-hero__summary" text={summaryText(briefing, today)} />
+
+      {open && exposure && waiting ? (
+        <div className="home-hero__metrics">
+          <MetricGroup title="Right now">
+            <Metric id="open_problems" label={open.label} value={fmtNum(open.value)} unit="items" provenance={open.provenance}
+              tone={open.value > 0 ? "elevated" : "default"} meaning={open.meaning}
+              implication="The briefing shows the top three first." next={{ label: "Open the briefing", href: "/app/briefing" }} />
+            <Metric id="value_at_stake" label={exposure.label} value={fmtINR(exposure.value)} provenance={exposure.provenance}
+              meaning={exposure.meaning} implication="It sizes what is at stake; it is not a forecast."
+              next={{ label: "See the cases", href: "/app/problems" }} />
+            <Metric id="approvals_waiting" label={waiting.label} value={fmtNum(waiting.value)} unit="plans" provenance={waiting.provenance}
+              meaning={waiting.meaning} implication={waiting.value > 0 ? "Nothing runs until a person decides." : "No plan is waiting on anyone."}
+              next={{ label: "Open Approvals", href: "/app/approvals" }} />
+          </MetricGroup>
         </div>
+      ) : null}
+
+      <div className="home-hero__actions" role="group" aria-label="Where to start">
+        <Link href="/app/briefing" className={buttonClass("primary")} data-testid="show-briefing">
+          <IconNews size={18} stroke={1.5} aria-hidden="true" /> Open today&apos;s briefing
+        </Link>
+        {loaded && has("A23") ? (
+          <button type="button" className={buttonClass("secondary")} onClick={() => void guided.start()} disabled={guided.starting} data-testid="start-guided">
+            <IconMapRoute size={18} stroke={1.5} aria-hidden="true" /> {guided.starting ? "Finding the top case…" : "Take the guided path"}
+          </button>
+        ) : null}
+        <Link href="/app/lab" className={buttonClass("secondary")} data-testid="run-simulation">
+          <IconFlask size={18} stroke={1.5} aria-hidden="true" /> Run a simulation
+        </Link>
       </div>
+      {guided.startError ? <p className="caption" role="alert">{guided.startError}</p> : null}
+      <ExplainDrawer pageKey="home" open={explain} onClose={() => setExplain(false)} />
     </section>
   );
 }
 
-export function PersonaPicker() {
-  const { persona, setPersona } = usePersona();
-  return (
-    <fieldset className="home-personas" data-testid="persona-picker">
-      <legend className="section-label">Who are you today?</legend>
-      <p className="caption home-personas__hint">Your role decides which problems you see first. You can change it any time in the top bar.</p>
-      <div className="home-personas__grid">
-        {PERSONAS.map((p) => {
-          const on = p.key === persona;
-          return (
-            <label key={p.key} className={`home-persona${on ? " is-on" : ""}`}>
-              <input type="radio" name="home-persona" value={p.key} checked={on} onChange={() => setPersona(p.key)} className="sr-only" />
-              <span className="home-persona__icon" aria-hidden="true">
-                {on ? <IconCircleCheck size={20} stroke={1.5} /> : <IconCircle size={20} stroke={1.5} />}
-              </span>
-              <span className="home-persona__text">
-                <span className="home-persona__name">{p.label}{on ? <span className="home-persona__sel"> · selected</span> : null}</span>
-                <span className="home-persona__line">{PERSONA_LINES[p.key]}</span>
-              </span>
-            </label>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
-}
-
-interface Path { id: string; icon: Icon; title: string; body: string; button: string; href?: string; topCase?: boolean }
-
-const PATHS: Path[] = [
-  { id: "attention", icon: IconRadar, title: "See what needs attention", body: "Every open problem, sorted by stage and severity, so you can pick what to work on.", button: "Open the Problems board", href: "/app/problems" },
-  { id: "one-problem", icon: IconListSearch, title: "Understand one problem", body: "Open the top case for your role: what happened, why, and what to do.", button: "Open the top case", topCase: true },
-  { id: "growth", icon: IconTrendingUp, title: "Find growth", body: "Customers growing in related products who do not yet buy a matching line.", button: "Open Opportunities", href: "/app/opportunities" },
-  { id: "approvals", icon: IconChecklist, title: "Review plans waiting for me", body: "Plans STRATA drafted that need a person to approve, change or reject.", button: "Open Approvals", href: "/app/approvals" },
-  { id: "customers", icon: IconBuildingStore, title: "Check on customers", body: "Look up any customer account and how it is doing against its own normal.", button: "Open Accounts", href: "/app/accounts" },
-  { id: "trust", icon: IconSitemap, title: "See how STRATA works and why to trust it", body: "The loop, what is built, the safeguards, and an honest evaluation.", button: "Open How STRATA works", href: "/app/how-it-works" },
-];
-
-function TopCaseButton({ label }: { label: string }) {
-  const router = useRouter();
+/** Home: a calm opening about today, then quiet sections that rise in as you scroll. */
+export function HomeView() {
   const { persona } = usePersona();
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const open = async () => {
-    setBusy(true);
-    setErr(null);
-    try {
-      const b = await apiGet<{ priorities: { ref: string; kind: string }[] }>(qs("/briefing", { persona }));
-      const top = b.priorities.find((p) => p.kind === "risk") ?? b.priorities[0];
-      router.push(top ? `/app/incidents/${encodeURIComponent(top.ref)}` : "/app/problems");
-    } catch (e) {
-      setErr((e as Error).message || "Could not load the briefing.");
-      setBusy(false);
-    }
-  };
-  return (
-    <>
-      <button type="button" className={buttonClass("secondary")} onClick={() => void open()} disabled={busy} data-testid="path-top-case">
-        {busy ? "Finding the top case…" : label}
-      </button>
-      {err ? <p className="caption" role="alert">Could not find the top case ({err}). <Link href="/app/problems">Open the Problems board instead</Link>.</p> : null}
-    </>
-  );
-}
+  const since = useLastVisit();
+  const briefing = useApi<BriefingLive>(qs("/briefing", { persona }));
+  const today = useApi<Digest>(since === undefined ? null : qs("/digest", { persona, period: "today", since: since ?? undefined }));
+  const yesterday = useApi<Digest>(qs("/digest", { persona, period: "yesterday" }));
+  const week = useApi<Digest>(qs("/digest", { persona, period: "week" }));
+  const todayState = { ...today, loading: today.loading || since === undefined };
 
-export function PathCards() {
   return (
-    <section aria-labelledby="home-paths-title" className="home-paths">
-      <h2 id="home-paths-title" className="section-label">Choose a path</h2>
-      <ul className="home-paths__grid">
-        {PATHS.map((p) => {
-          const Ico = p.icon;
-          return (
-            <li key={p.id} className="card home-path" data-testid={`path-${p.id}`}>
-              <span className="home-path__icon" aria-hidden="true"><Ico size={32} stroke={1.25} /></span>
-              <h3 className="home-path__title">{p.title}</h3>
-              <p className="home-path__body">{p.body}</p>
-              <div className="home-path__action">
-                {p.topCase ? <TopCaseButton label={p.button} /> : <Link href={p.href ?? "/app"} className={buttonClass("secondary")}>{p.button}</Link>}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <div className="home2" data-testid="home">
+      <div className="home2__main">
+        {briefing.error ? (
+          <ErrorState error={briefing.error} onRetry={briefing.reload} title="Could not load today's summary" />
+        ) : !briefing.data || (todayState.loading && !today.data && !today.error) ? (
+          <div className="home-hero home-hero--loading"><StrataLoader size="lg" label="Reading today's data" /></div>
+        ) : (
+          <Hero briefing={briefing.data} today={today.data} />
+        )}
+
+        <PeriodSection id="home-yesterday" title="Yesterday" st={yesterday}
+          statIds={["new_problems", "tickets_opened", "complaints_opened", "decisions_made"]}
+          seeAll={{ href: "/app/audit", label: "See all activity" }} />
+        <PeriodSection id="home-week" title="Last 7 days" st={week}
+          statIds={["new_problems", "decisions_made", "outcomes_recorded"]}
+          seeAll={{ href: "/app/problems", label: "See all problems" }} />
+        <PipelineSection st={todayState} />
+        <TrendsSection st={week} />
+        <NumbersSection st={week} />
+        <MissedSection st={todayState} firstVisit={since === null} />
+      </div>
+      <Toc />
+    </div>
   );
 }

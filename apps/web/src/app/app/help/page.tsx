@@ -62,14 +62,19 @@ function MetricEntry({ m }: { m: MetricDef }) {
         <h3 className="help-entry__name">{m.name}</h3>
         <ProvenanceBadge provenance={m.provenance} />
       </div>
-      <span className="help-entry__id">{m.id} · {m.unit}</span>
-      <dl className="help-entry__dl">
-        <dt>How it is worked out</dt><dd>{m.formula}</dd>
-        <dt>Good direction</dt><dd><span className="help-dir">{DIRECTION[m.good_direction] ?? m.good_direction}</span></dd>
-        <dt>Compared with</dt><dd>{m.compare}</dd>
-        <dt>What a change means</dt><dd>{m.implies}</dd>
-        <dt>What to do</dt><dd>{m.action}</dd>
-      </dl>
+      <p className="help-entry__text">{m.implies}</p>
+      <p className="help-entry__text"><span className="help-dir">What to do:</span> {m.action}</p>
+      {/* progressive disclosure: the working-out is one click away */}
+      <details className="help-more">
+        <summary>How it is worked out</summary>
+        <dl className="help-entry__dl">
+          <dt>Formula</dt><dd>{m.formula}</dd>
+          <dt>Good direction</dt><dd>{DIRECTION[m.good_direction] ?? m.good_direction}</dd>
+          <dt>Compared with</dt><dd>{m.compare}</dd>
+          <dt>Unit</dt><dd>{m.unit}</dd>
+        </dl>
+        <span className="help-entry__id">{m.id}</span>
+      </details>
       {m.status ? <p className="help-entry__note">{m.status}</p> : null}
       {m.term && TERMS[m.term] ? <a href={`#term-${m.term}`} className="help-entry__note">Related term: {TERMS[m.term].term}</a> : null}
     </>

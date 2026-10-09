@@ -1,6 +1,6 @@
 # STRATA — Build Blueprint (v0.1)
 
-Team STRATA · Arihant Chordia, Yogesh R Mehta · The Industry Games 2026 · Sponsor: Altygen Biopharm · Problem: *Intelligent Business Operations & Customer Engagement*
+Team STRATA · Arihant Chordia, Yogesh R Mehta · The Industry Games 2026 · Sponsor: the manufacturer · Problem: *Intelligent Business Operations & Customer Engagement*
 
 Label legend (your rule): **[DIRECT]** stated by a source · **[CONTEXT]** available in the files/web · **[INFERENCE]** careful reasoning, not verified · **[UNKNOWN]** we do not know yet. Nothing below presents an inference as a fact.
 
@@ -8,7 +8,7 @@ Label legend (your rule): **[DIRECT]** stated by a source · **[CONTEXT]** avail
 
 ## 0. What we are building, in one paragraph
 
-**STRATA Operational Intelligence Console** — an operations-management layer (it manages work through tasks, approvals and standing routines on top of existing systems) and a working prototype of the "AI operational nervous system" on your deck: it watches a synthetic-but-realistic nephrology-pharma data estate (orders, support, inventory, field activity, receivables, SOP/incident documents), **detects** cross-system risks and opportunities, **investigates** the likely cause with four agents that must cite evidence, **remembers** what happened last time (pgvector RAG), proposes an **action plan that only a human can approve**, creates the workflow, and **learns** from the measured outcome. Hero scenario is exactly your deck's Customer #4821. The UI is an Altygen-branded enterprise console, not a chat app. Everything on screen is computed from seeded data, labelled with its provenance, and explained in one light caption underneath.
+**STRATA Operational Intelligence Console** — an operations-management layer (it manages work through tasks, approvals and standing routines on top of existing systems) and a working prototype of the "AI operational nervous system" on your deck: it watches a synthetic-but-realistic nephrology-pharma data estate (orders, support, inventory, field activity, receivables, SOP/incident documents), **detects** cross-system risks and opportunities, **investigates** the likely cause with four agents that must cite evidence, **remembers** what happened last time (pgvector RAG), proposes an **action plan that only a human can approve**, creates the workflow, and **learns** from the measured outcome. Hero scenario is exactly your deck's Customer #4821. The UI is an Enterprise enterprise console, not a chat app. Everything on screen is computed from seeded data, labelled with its provenance, and explained in one light caption underneath.
 
 Phase 1–3 are your deck's *Detect → Reason → Act*. We add Phase 0 (contracts + scaffold) and Phase 4 (polish + demo hardening). Phase 5 (Vercel + Supabase + Google sign-in) happens only after you have reviewed the prototype.
 
@@ -18,21 +18,21 @@ Phase 1–3 are your deck's *Detect → Reason → Act*. We add Phase 0 (contrac
 
 | Item | Status |
 |---|---|
-| Altygen HQ Gurugram; name from "Adding Life To Years for Generations"; "Quality and People" | [DIRECT] company site |
+| the client HQ Gurugram; name from "Adding Life To Years for Generations"; "Quality and People" | [DIRECT] company site |
 | Nephrology/renal-care focus: electrolyte, renal nutrition, CKD-MBD, renal anemia, renal medicine, pain; ~25 products listed | [DIRECT] company site |
 | Claims cGMP / WHO-GMP / FSSAI certified facilities; manufacturing partners not named | [DIRECT] company site / [UNKNOWN] who and where |
 | Sells via pharmacies and medical stores; stakeholders: healthcare professionals, patients, channel partners, own team | [DIRECT] company site |
 | Incorporated 3 Oct 2023 (≈3 years old) | [CONTEXT] third-party MCA listing; verify on MCA |
 | Brand: Poppins, indigo ≈ #211756, crimson ≈ #E5310E | [DIRECT] measured from the site's computed CSS |
 | Listed as "Internship Sponsor / Applied Tech Partner … bridging computational intelligence and modern biotechnology" | [DIRECT] Industry Games site |
-| Sector shift: after the 2025 cough-syrup contamination deaths, DCGI told state regulators to enforce revised Schedule M GMP (by Jan 2026); MSME deadline had been extended to 31 Dec 2025 | [CONTEXT] news summaries (Drishti IAS 13 Nov 2025; DT Next). Whether it touches Altygen directly depends on who manufactures for them → [UNKNOWN] |
-| Altygen's internal tools (ERP/CRM/WhatsApp/Excel) | **[UNKNOWN]** — nothing public. WhatsApp is on their website (a WhatsApp contact button) [DIRECT]; use of Tally/Marg/Zoho/Salesforce is [INFERENCE] only |
+| Sector shift: after the 2025 cough-syrup contamination deaths, DCGI told state regulators to enforce revised Schedule M GMP (by Jan 2026); MSME deadline had been extended to 31 Dec 2025 | [CONTEXT] news summaries (Drishti IAS 13 Nov 2025; DT Next). Whether it touches the client directly depends on who manufactures for them → [UNKNOWN] |
+| the client's internal tools (ERP/CRM/WhatsApp/Excel) | **[UNKNOWN]** — nothing public. WhatsApp is on their website (a WhatsApp contact button) [DIRECT]; use of Tally/Marg/Zoho/Salesforce is [INFERENCE] only |
 | Judging rubric | **[UNKNOWN]** — dashboard is login-gated (SRM email); I did not and cannot sign in for you |
 | Timeline | [DIRECT] site: Oct 9 live hackathon + evaluation; Oct 10 pitches + awards. **Today is Oct 9.** |
-| District label | **District 05 — confirmed** against the updated 5-district official problem-statements PDF (Altygen Biopharm · Intelligent Business Operations & Customer Engagement) |
+| District label | **District 05 — confirmed** against the updated 5-district official problem-statements PDF (the manufacturer · Intelligent Business Operations & Customer Engagement) |
 | Deck's figures (73%, 33%, 39%, 61%) | [CONTEXT] cited to Salesforce 2024 / McKinsey 2025 in your deck; I did not re-verify them |
 
-### 1.1 Ask the Altygen mentor today (this converts guesses into evidence, and judges notice it)
+### 1.1 Ask the the client mentor today (this converts guesses into evidence, and judges notice it)
 1. What do you use today for orders/billing, inventory, CRM/field reports? (Tally, Marg, Busy, Zoho, Salesforce, Excel, WhatsApp?)
 2. When you say "customer", who is it — stockist, chemist chain, hospital pharmacy, doctor? (We assume B2B channel accounts and use prescribers only as signals; no patient data.)
 3. What surprised you most in the last quarter that you found out late?
@@ -87,12 +87,12 @@ Everything in §4 is an **addition**. Each is behind a feature flag (`FEATURES.A
 
 ---
 
-## 4. Additions — features Altygen did not ask for but would plausibly value
+## 4. Additions — features the client did not ask for but would plausibly value
 
 Change class: 🟢 minor (preserves your idea) · 🟡 moderate (changes implementation) · 🔴 major (changes the concept — none proposed).
 Scores are **my estimates (1–5)**, not measurements: Judge value / Build cost / Failure risk. Priority = P0 must-ship, P1 ship if P0 gates pass, P2 only if time remains.
 
-| ID | Addition | Why it matters to Altygen | Class | JV/BC/FR | Pri |
+| ID | Addition | Why it matters to the client | Class | JV/BC/FR | Pri |
 |---|---|---|---|---|---|
 | A1 | **Revenue Exposure (₹)** on every incident and portfolio | turns "risk 91" into money a Business Head can rank by. Defined as the account's baseline 12-week order value — **exposure, not a forecast of loss**; the caption says so | 🟢 | 5/1/1 | P0 |
 | A14 | **Evidence-or-Silence** grounding validator + provenance tag (`computed / synthetic / illustrative / assumption`) on every number | answers "how do we know this isn't hallucinated?" — your project's hardest constraint | 🟢 | 5/2/2 | P0 |
@@ -205,7 +205,7 @@ strata/
 ## 7. Synthetic data estate
 
 - 240 accounts (stockists, chemist chains, hospital pharmacies, nephrology clinics) across 6 NCR-and-nearby regions; ~28 reps; ~60 prescribers; 26 SKUs across the six therapy areas; **104 weeks** of history (two years, so the seasonality model has a prior year); fixed seeds (`seed_dev`, `seed_holdout`).
-- Product names: **default `generic`** (e.g. "Phosphate binder 800 mg, SKU-CKD-01"). An opt-in `catalog` mode may use up to 8 names from Altygen's public catalogue for *background* SKUs only — never in the shortage (S01), quality (S04/S05) or payment-stress (S07) scenarios, so we never attach fake problems to a real brand. Permanent banner "SYNTHETIC DATA — NOT ALTYGEN'S". Account names are obviously fictional. No real people, no real patients.
+- Product names: **default `generic`** (e.g. "Phosphate binder 800 mg, SKU-CKD-01"). An opt-in `catalog` mode may use up to 8 names from the client's public catalogue for *background* SKUs only — never in the shortage (S01), quality (S04/S05) or payment-stress (S07) scenarios, so we never attach fake problems to a real brand. Permanent banner "SYNTHETIC DATA". Account names are obviously fictional. No real people, no real patients.
 - Noise model: log-normal order noise, weekly seasonality, a festival-season index, random per-account drift. Planted scenarios S01–S10 plus decoys S11–S13 live in `contracts/scenarios.yaml`.
 - **Computed, not painted — and honest about what is designed.** The hero effect sizes (−31 % orders, +47 % complaint *count*, +22 % response time, −40 % interaction) are **generator parameters of a designed scenario**; the engine's job is to *recover* them from noisy data. Tests assert recovery within ±0.08 (Poisson noise makes tighter tolerances a seed-cherry-picking exercise, which is forbidden). Risk score 91, similarity 89 %, business health 84, "8 emerging risks", "3 high priority" on slides 7/8/12 are illustrative mock-up values: **no test asserts them**; whatever the system computes goes into `docs/DECK_DELTAS.md` and the slides are updated to match.
 
@@ -229,7 +229,7 @@ Defined in `contracts/signal_catalog.yaml`. Summary:
 5. Regulatory-sensitive signals bypass the score: always an incident, always QA Head, always four-eyes.
 6. Cause attribution is done by the Investigator over a fixed taxonomy (`cause_category` enum), not free text.
 7. scikit-learn `IsolationForest` is a **secondary cross-check** reported in Evaluation ("did an unsupervised model also flag it?"), not the decider. Honest framing: rules+statistics decide; ML corroborates.
-8. Tuning allowed on seed A only. Seed B is evaluated once per tuning round and reported as-is, misses included. **Honest caveat printed on the Evaluation page:** seed B uses the same generator and scenarios with a different random draw — it guards against overfitting to one sample, it is *not* independent validation. Independent validation needs real data (the Altygen CSV path).
+8. Tuning allowed on seed A only. Seed B is evaluated once per tuning round and reported as-is, misses included. **Honest caveat printed on the Evaluation page:** seed B uses the same generator and scenarios with a different random draw — it guards against overfitting to one sample, it is *not* independent validation. Independent validation needs real data (the the client CSV path).
 9. Business Health Index (0–100) = weighted mean of five pillars (customer health, supply continuity, service quality, field coverage, commercial momentum), each 0–100 from computed aggregates; the page shows the decomposition so the number is never a black box.
 
 ### 8.1 Evaluation metrics (all computed against `eval_labels`)
@@ -264,8 +264,8 @@ Detection precision, detection recall, root-cause accuracy (cause category), med
 ## 10. Interface
 
 ### 10.1 Principles (so it does not look like an AI-generated hackathon app)
-1. **Altygen Console look** from `design-tokens.css`: indigo sidebar, white work surface on a lavender-grey canvas, crimson only for "act now", 6 px corners, 1 px borders, no gradients, no glow, no glassmorphism, no emoji, no sparkle icons, no purple-to-blue hero, no rounded chat bubbles. Fonts: Poppins (brand/nav/headings), IBM Plex Sans (UI/data), IBM Plex Mono (IDs/timestamps). Icons: Tabler line icons. 13 px base text, 36 px table rows, compact toggle.
-2. **Fidelity to their internal tools is an explicit [UNKNOWN].** We deliver "Altygen-brand-native enterprise console" now and re-skin within an hour if the mentor names tools. Do not claim it "matches their internal tools".
+1. **STRATA Console look** from `design-tokens.css`: indigo sidebar, white work surface on a lavender-grey canvas, crimson only for "act now", 6 px corners, 1 px borders, no gradients, no glow, no glassmorphism, no emoji, no sparkle icons, no purple-to-blue hero, no rounded chat bubbles. Fonts: Poppins (brand/nav/headings), IBM Plex Sans (UI/data), IBM Plex Mono (IDs/timestamps). Icons: Tabler line icons. 13 px base text, 36 px table rows, compact toggle.
+2. **Fidelity to their internal tools is an explicit [UNKNOWN].** We deliver "brand-native enterprise console" now and re-skin within an hour if the mentor names tools. Do not claim it "matches their internal tools".
 3. **One question per page.** Every page opens with the question it answers (e.g. "Which accounts need me today?"). Max 6 primary widgets per page (a table or a strip of tiles counts as one). No orphan numbers.
 4. **Every number and every chart has a caption** in `--ink-3`, 12 px: *what this is* then *what it implies*. Enforced in code: `<Metric>` and `<ChartFrame>` require `meaning` and `implication` props (TypeScript error if missing) and a `provenance` tag shown as a tiny badge. Tables use `<DataTable provenance=… caption=…>` (one badge + caption per table, column tooltips for definitions); IDs, dates and timestamps are exempt.
 5. **Motion**: 120–220 ms ease-out on hover/expand/drawer; numbers count up once ≤400 ms; no bounce, no parallax, no scroll-jacking; respects reduced-motion.
@@ -273,7 +273,7 @@ Detection precision, detection recall, root-cause accuracy (cause category), med
 7. **Permanent chips** in the top bar: `SYNTHETIC DATA`, `Mode: live|replay`, persona switcher.
 
 ### 10.2 Landing (`/`)
-Quiet, typographic, one screen. Wordmark **STRATA**, tagline "Detect problems before they become business losses.", team line "Arihant Chordia · Yogesh R Mehta", context line "The Industry Games 2026 · built for Altygen Biopharm — Intelligent Business Operations & Customer Engagement" ("District 05" shown, read from `config/district.ts`), a thin animated line showing Observe → Detect → Investigate → Remember → Act → Learn, one primary button "Enter Strata". A footer note: "Prototype with synthetic data." No stock imagery.
+Quiet, typographic, one screen. Wordmark **STRATA**, tagline "Detect problems before they become business losses.", team line "Arihant Chordia · Yogesh R Mehta", context line "The Industry Games 2026 ·: Intelligent Business Operations & Customer Engagement" ("District 05" shown, read from `config/district.ts`), a thin animated line showing Observe → Detect → Investigate → Remember → Act → Learn, one primary button "Enter Strata". A footer note: "Prototype with synthetic data." No stock imagery.
 
 ### 10.3 Welcome / Briefing (`/app`)
 Greeting like a new assistant chat but as a briefing card: "Good morning, Operations Manager." (time- and persona-aware) · one paragraph computed from data ("Overnight Strata checked N signals across the connected source systems (N and the count are computed). 3 need you today; 1 is an opportunity.") · three suggested starting points as buttons (e.g. "Walk me through the top incident", "What changed since yesterday?", "Where are we quietly losing money?") · an **Ask Strata** input whose answers render as structured cards with evidence chips, not a free-text chat log · below, "Today's priorities" (max 7, Alert Budget) and a compact loop-status strip.
@@ -346,7 +346,7 @@ Rule from you: **2–3 build passes maximum, no endless trial runs.** Each gate 
 
 ## 12. Win / lose tree
 
-**Win conditions:** a hero incident that *computes itself* live; judges can break it with the Lab and it holds; honest numbers (including misses); the approval gate visibly prevents an unsafe auto-action (QA route); Altygen sees *their* kind of problems (batches, refills, expiry) not generic churn; the deck, the app and the pitch tell the same story.
+**Win conditions:** a hero incident that *computes itself* live; judges can break it with the Lab and it holds; honest numbers (including misses); the approval gate visibly prevents an unsafe auto-action (QA route); the client sees *their* kind of problems (batches, refills, expiry) not generic churn; the deck, the app and the pitch tell the same story.
 
 **Loss conditions → mitigation**
 | Risk | Mitigation |
@@ -392,7 +392,7 @@ Update this table honestly after each pass. A score of 9 requires evidence in th
 
 ## 14. Reality check (project rule 17: can two students build this?)
 
-Yes **if** the scope tier is chosen honestly (default Compact) and the cut line is respected. Single most likely failure point: Gates 1–2 (seasonality, hero tolerance, keyless retrieval) — the contracts now specify each so Codex does not burn its two fix iterations guessing. Biggest build risks: Lab (state management), agent grounding (strict validator), and UI breadth. Lowest-risk, highest-value first: engine + hero incident + approval + audit + replay. Resources: Available — Codex, Claude, Antigravity, Gemini, ChatGPT (your list). Easy to obtain — API keys, Supabase/Vercel free tiers, Google Cloud OAuth client. Difficult — real Altygen data (not needed; synthetic by design). Unrealistic — matching Altygen's unseen internal tools without a mentor answer.
+Yes **if** the scope tier is chosen honestly (default Compact) and the cut line is respected. Single most likely failure point: Gates 1–2 (seasonality, hero tolerance, keyless retrieval) — the contracts now specify each so Codex does not burn its two fix iterations guessing. Biggest build risks: Lab (state management), agent grounding (strict validator), and UI breadth. Lowest-risk, highest-value first: engine + hero incident + approval + audit + replay. Resources: Available — Codex, Claude, Antigravity, Gemini, ChatGPT (your list). Easy to obtain — API keys, Supabase/Vercel free tiers, Google Cloud OAuth client. Difficult — real real company data (not needed; synthetic by design). Unrealistic — matching the client's unseen internal tools without a mentor answer.
 
 ---
 

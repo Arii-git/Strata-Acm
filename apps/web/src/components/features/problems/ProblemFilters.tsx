@@ -3,6 +3,7 @@
 import { CATEGORIES, type CategoryKey } from "@config/taxonomy";
 import { CategoryIcon } from "@/components/ui/CategoryChip";
 import type { Severity } from "@/lib/api/types";
+import { fmtNum } from "@/lib/format";
 import { personaLabel } from "@/lib/persona";
 import { SEVERITY_ORDER, type ProblemRow } from "./model";
 
@@ -12,29 +13,35 @@ const MIN_SEV_LABEL: Record<Severity, string> = {
   critical: "Critical only", high: "High or above", elevated: "Elevated or above", watch: "Watch or above", healthy: "Any",
 };
 
-/** Category chips (multi-select, icon + label + count), minimum severity and owner role. */
-export function ProblemFilters({ rows, value, onChange }: { rows: ProblemRow[]; value: ProblemFilterState; onChange: (v: ProblemFilterState) => void }) {
+/**
+ * The same filter bar on every problem list: category chips (only categories present, icon + label + count),
+ * minimum severity, owner role, and "Showing n of m · Clear" when anything is filtered.
+ */
+export function ProblemFilters({
+  rows, value, onChange, shown,
+}: { rows: ProblemRow[]; value: ProblemFilterState; onChange: (v: ProblemFilterState) => void; shown?: number }) {
   const counts = new Map<string, number>();
   rows.forEach((r) => counts.set(r.category, (counts.get(r.category) ?? 0) + 1));
   const owners = [...new Set(rows.map((r) => r.owner_role))].sort((a, b) => personaLabel(a).localeCompare(personaLabel(b)));
   const toggle = (k: CategoryKey) =>
     onChange({ ...value, cats: value.cats.includes(k) ? value.cats.filter((c) => c !== k) : [...value.cats, k] });
+  const active = value.cats.length > 0 || !!value.minSev || !!value.owner;
+  const cats = CATEGORIES.filter((c) => (counts.get(c.key) ?? 0) > 0 || value.cats.includes(c.key));
 
   return (
     <div className="problem-filters" data-testid="problem-filters">
       <div className="problem-filters__cats" role="group" aria-label="Filter by category (select any number)">
         <button type="button" className="filter-chip" aria-pressed={value.cats.length === 0} onClick={() => onChange({ ...value, cats: [] })}>
-          All categories <span className="filter-chip__count num">{rows.length}</span>
+          All <span className="filter-chip__count num">{rows.length}</span>
         </button>
-        {CATEGORIES.map((c) => {
+        {cats.map((c) => {
           const n = counts.get(c.key) ?? 0;
-          const on = value.cats.includes(c.key);
           return (
             <button
               key={c.key}
               type="button"
               className="filter-chip"
-              aria-pressed={on}
+              aria-pressed={value.cats.includes(c.key)}
               data-testid={`filter-cat-${c.key}`}
               title={c.meaning}
               onClick={() => toggle(c.key)}
@@ -55,12 +62,18 @@ export function ProblemFilters({ rows, value, onChange }: { rows: ProblemRow[]; 
           </select>
         </label>
         <label className="problem-filters__field">
-          Owner role
+          Owner
           <select className="select" value={value.owner} onChange={(e) => onChange({ ...value, owner: e.target.value })} data-testid="filter-owner">
             <option value="">Any role</option>
             {owners.map((o) => <option key={o} value={o}>{personaLabel(o)}</option>)}
           </select>
         </label>
+        {active ? (
+          <span className="problem-filters__status">
+            {shown != null ? <span>Showing {fmtNum(shown)} of {fmtNum(rows.length)}</span> : null}
+            <button type="button" className="link-button" onClick={() => onChange({ cats: [], minSev: "", owner: "" })}>Clear filters</button>
+          </span>
+        ) : null}
       </div>
     </div>
   );

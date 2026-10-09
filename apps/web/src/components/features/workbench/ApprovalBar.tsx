@@ -43,16 +43,12 @@ export function ApprovalBar({ plan, onDecided }: { plan: WbPlan; onDecided: (out
       role="region"
       aria-label="Plan decision"
       data-testid="approval-bar"
-      style={{
-        position: "sticky", bottom: 0, zIndex: 5, marginTop: "var(--sp-4)",
-        background: "var(--surface)", borderTop: "1px solid var(--line-strong)", boxShadow: "var(--shadow-pop)",
-        padding: "var(--sp-3) var(--sp-4)", borderRadius: "var(--r-md) var(--r-md) 0 0",
-      }}
+      className="approval-bar"
     >
       <div className="row" style={{ flexWrap: "wrap", gap: "var(--sp-3)", alignItems: "flex-end" }}>
         <div className="stack" style={{ gap: 2, minWidth: 200 }}>
           <strong>Plan {plan.id} awaiting decision</strong>
-          <span className="caption">Requires {personaLabel(plan.requires_role)}{plan.four_eyes ? " + four-eyes (two different named approvers)" : ""}. You are acting as {label}.</span>
+          <span className="caption">Needs {personaLabel(plan.requires_role)}{plan.four_eyes ? " and a second, different approver" : ""}. You act as {label}.</span>
         </div>
         <label style={{ ...labelStyle, width: 180 }}>
           Your name

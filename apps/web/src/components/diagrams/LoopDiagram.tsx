@@ -42,7 +42,11 @@ function edge(from: { x: number; y: number }, to: { x: number; y: number }) {
   return { x1: from.x + dx * t, y1: from.y + dy * t, x2: to.x - dx * t, y2: to.y - dy * t };
 }
 
-export function LoopDiagram({ caption = true }: { caption?: boolean }) {
+/**
+ * `activeKey` highlights one stage (used by the How STRATA works stepper). Colours come only from CSS classes
+ * in styles/lanes/home.css, so the diagram follows the light and dark tokens.
+ */
+export function LoopDiagram({ caption = true, activeKey }: { caption?: boolean; activeKey?: string | null }) {
   const router = useRouter();
   const uid = useId().replace(/:/g, "");
   const titleId = `loop-title-${uid}`;
@@ -57,7 +61,7 @@ export function LoopDiagram({ caption = true }: { caption?: boolean }) {
         <desc id={descId}>{LOOP_STAGES.map((s, i) => `${i + 1}. ${s.label}: ${s.alt}`).join(" ")} Then the loop starts again.</desc>
         <defs>
           <marker id={arrowId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" style={{ fill: "var(--ink-3)" }} />
+            <path d="M0,0 L10,5 L0,10 z" className="diagram__arrow" />
           </marker>
         </defs>
 
@@ -65,15 +69,14 @@ export function LoopDiagram({ caption = true }: { caption?: boolean }) {
           const q = pts[(i + 1) % pts.length];
           const e = edge(p, q);
           return (
-            <line key={`edge-${i}`} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-              style={{ stroke: "var(--line-strong)", strokeWidth: 2 }} markerEnd={`url(#${arrowId})`} />
+            <line key={`edge-${i}`} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} className="diagram__edge" markerEnd={`url(#${arrowId})`} />
           );
         })}
 
         <g aria-hidden="true">
-          <text x={CX} y={CY - 8} textAnchor="middle" style={{ fill: "var(--ink-2)", fontFamily: "var(--font-brand)", fontWeight: 600, fontSize: 15 }}>One loop, every day</text>
-          <text x={CX} y={CY + 16} textAnchor="middle" style={{ fill: "var(--ink-3)", fontSize: 13 }}>Nothing is acted on without</text>
-          <text x={CX} y={CY + 34} textAnchor="middle" style={{ fill: "var(--ink-3)", fontSize: 13 }}>a person&apos;s approval</text>
+          <text x={CX} y={CY - 8} textAnchor="middle" className="diagram__centre-title">One loop, every day</text>
+          <text x={CX} y={CY + 16} textAnchor="middle" className="diagram__centre-text">Nothing is acted on without</text>
+          <text x={CX} y={CY + 34} textAnchor="middle" className="diagram__centre-text">a person&apos;s approval</text>
         </g>
 
         {LOOP_STAGES.map((s, i) => {
@@ -85,7 +88,7 @@ export function LoopDiagram({ caption = true }: { caption?: boolean }) {
             <a
               key={s.key}
               href={s.href}
-              className="diagram__link"
+              className={`diagram__link${s.key === "act" ? " is-gate" : ""}${activeKey === s.key ? " is-active" : ""}`}
               aria-label={`${i + 1}. ${s.label}: ${s.line}. Opens ${s.href.replace("/app/", "")}.`}
               onClick={(ev) => {
                 if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button !== 0) return;
@@ -93,13 +96,12 @@ export function LoopDiagram({ caption = true }: { caption?: boolean }) {
                 router.push(s.href);
               }}
             >
-              <rect x={x} y={y} width={BW} height={BH} rx={6} className="diagram__box"
-                style={{ fill: s.key === "act" ? "var(--indigo-50)" : "var(--surface)", stroke: s.key === "act" ? "var(--indigo-600)" : "var(--line-strong)", strokeWidth: 1.5 }} />
-              <circle cx={x + 22} cy={p.y} r={14} style={{ fill: "var(--indigo-800)" }} />
-              <text x={x + 22} y={p.y + 5} textAnchor="middle" style={{ fill: "var(--ink-inverse)", fontSize: 13, fontWeight: 600 }}>{i + 1}</text>
-              <Ico x={x + BW - 28} y={y + 8} size={20} stroke={1.5} style={{ color: "var(--indigo-700)" }} aria-hidden="true" />
-              <text x={x + 44} y={p.y - 4} style={{ fill: "var(--ink)", fontFamily: "var(--font-brand)", fontWeight: 600, fontSize: 16 }}>{s.label}</text>
-              <text x={x + 44} y={p.y + 16} style={{ fill: "var(--ink-3)", fontSize: 13 }}>{s.line}</text>
+              <rect x={x} y={y} width={BW} height={BH} rx={8} className="diagram__box" />
+              <circle cx={x + 22} cy={p.y} r={13} className="diagram__badge" />
+              <text x={x + 22} y={p.y + 4.5} textAnchor="middle" className="diagram__badge-text">{i + 1}</text>
+              <Ico x={x + BW - 28} y={y + 8} size={18} stroke={1.5} className="diagram__icon" aria-hidden="true" />
+              <text x={x + 44} y={p.y - 4} className="diagram__label">{s.label}</text>
+              <text x={x + 44} y={p.y + 16} className="diagram__line">{s.line}</text>
             </a>
           );
         })}

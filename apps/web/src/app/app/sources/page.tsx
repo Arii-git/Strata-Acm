@@ -144,7 +144,7 @@ export default function SourcesPage() {
                 </div>
               ))}
             </div>
-            <div className="row"><ProvenanceBadge provenance="synthetic" /><span className="caption">Feed timings are synthetic: generated with the dataset, not read from Altygen systems.</span></div>
+            <div className="row"><ProvenanceBadge provenance="synthetic" /><span className="caption">Feed timings are synthetic: generated with the dataset, not read from real company systems.</span></div>
           </div>
         ),
       }}

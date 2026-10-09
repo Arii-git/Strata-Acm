@@ -1,0 +1,53 @@
+# Demo companies and demo users for STRATA login (night build, auth-backend lane).
+#
+# Everything here is FICTIONAL test data. No real companies, people or mailboxes.
+# - Company join codes are FIXED once assigned. Never change or regenerate them; the engine keeps whatever code a
+#   company already has in the state DB. Alphabet: A-Z and 2-9 without the look-alikes 0/O/1/I.
+# - Demo users live on a non-routable domain, so the mailer never sends real mail to them (outbox only).
+# - demo_password is a shared TEST value so judges can sign in per role. It is shown by GET /auth/demo-accounts
+#   only while env STRATA_DEMO_LOGINS != "0" (default on). Turn it off for anything public-facing.
+
+demo_password: "Strata-Demo-2026"
+demo_domain: "demo.strata.local"
+
+companies:
+  - id: co_renalis
+    name: "Renalis Pharma Distribution (fictional)"
+    industry: "Pharma & healthcare distribution"
+    code: "RNL7K2"
+  - id: co_brightcart
+    name: "BrightCart Consumer Goods (fictional)"
+    industry: "FMCG"
+    code: "FMC8Q4"
+  - id: co_meridian
+    name: "Meridian Freight & Logistics (fictional)"
+    industry: "Logistics"
+    code: "LGX5T9"
+
+# Verified demo users per role across the three test companies.
+demo_users:
+  company: co_renalis
+  users:
+    # Renalis (uses default company)
+    - { id: demo_business_head, role: business_head, name: "Business Head (demo)", email: "business.head@demo.strata.local" }
+    - { id: demo_operations_manager, role: operations_manager, name: "Operations Manager (demo)", email: "operations@demo.strata.local" }
+    - { id: demo_account_manager, role: account_manager, name: "Account Manager (demo)", email: "accounts@demo.strata.local" }
+    - { id: demo_sales_manager, role: sales_manager, name: "Sales Manager (demo)", email: "sales@demo.strata.local" }
+    - { id: demo_support_manager, role: support_manager, name: "Support Manager (demo)", email: "support@demo.strata.local" }
+    - { id: demo_qa_head, role: qa_head, name: "QA Head (demo)", email: "qa@demo.strata.local" }
+    
+    # BrightCart
+    - { id: bc_business_head, company: co_brightcart, role: business_head, name: "BC Business Head", email: "head@brightcart.demo.strata.local" }
+    - { id: bc_operations, company: co_brightcart, role: operations_manager, name: "BC Operations", email: "ops@brightcart.demo.strata.local" }
+    - { id: bc_accounts, company: co_brightcart, role: account_manager, name: "BC Accounts", email: "accounts@brightcart.demo.strata.local" }
+    - { id: bc_sales, company: co_brightcart, role: sales_manager, name: "BC Sales", email: "sales@brightcart.demo.strata.local" }
+    - { id: bc_support, company: co_brightcart, role: support_manager, name: "BC Support", email: "support@brightcart.demo.strata.local" }
+    - { id: bc_qa, company: co_brightcart, role: qa_head, name: "BC QA Head", email: "qa@brightcart.demo.strata.local" }
+    
+    # Meridian
+    - { id: md_business_head, company: co_meridian, role: business_head, name: "Meridian Head", email: "head@meridian.demo.strata.local" }
+    - { id: md_operations, company: co_meridian, role: operations_manager, name: "Meridian Operations", email: "ops@meridian.demo.strata.local" }
+    - { id: md_accounts, company: co_meridian, role: account_manager, name: "Meridian Accounts", email: "accounts@meridian.demo.strata.local" }
+    - { id: md_sales, company: co_meridian, role: sales_manager, name: "Meridian Sales", email: "sales@meridian.demo.strata.local" }
+    - { id: md_support, company: co_meridian, role: support_manager, name: "Meridian Support", email: "support@meridian.demo.strata.local" }
+    - { id: md_qa, company: co_meridian, role: qa_head, name: "Meridian QA Head", email: "qa@meridian.demo.strata.local" }

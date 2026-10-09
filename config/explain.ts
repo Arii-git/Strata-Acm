@@ -8,15 +8,33 @@
 export interface Explain { title: string; what: string; read: string[]; next: string }
 
 export const EXPLAIN: Record<string, Explain> = {
-  home: {
-    title: "Start",
-    what: "Your starting point. Nothing is analysed or ranked here; you choose where to go.",
+  settings: {
+    title: "Settings",
+    what: "Your profile, appearance, email alerts and company. Business heads also see the company join code and the agent deadline rules.",
     read: [
-      "Each card is one path through the work: today's briefing, the problems board, the case file, or the Lab.",
-      "The loop diagram shows the order STRATA works in: detect → investigate → plan → human approval → simulated tasks → outcome → memory.",
-      "News and events appear only when you open them; nothing scrolls past on its own.",
+      "The join code is fixed and never changes; colleagues use it to join your company.",
+      "Agent deadlines decide how long a person has before the agent acts for each risk level.",
     ],
-    next: "Pick the card that matches what you want to do, or take the guided path. Opening a card only navigates; it changes nothing.",
+    next: "Change what you need; changes save immediately.",
+  },
+  agents: {
+    title: "AI agents",
+    what: "Every AI agent in STRATA, what it does, where it works and how much it may do on its own.",
+    read: [
+      "Risk levels run 1 (low) to 5 (critical); level 2 is the default and brings a person in.",
+      "Recent decisions lists what agents decided when a deadline passed, with the reason and evidence.",
+    ],
+    next: "Open a decision to review it; provisional decisions can be undone.",
+  },
+  home: {
+    title: "Home",
+    what: "A short written summary of today, then yesterday, the last 7 days, your pipeline, trends and what you missed.",
+    read: [
+      "Every number is computed from the synthetic data and carries a provenance badge.",
+      "Your pipeline counts problems by stage; each stage opens its page.",
+      "Look what you missed lists what happened since your last visit to Home.",
+    ],
+    next: "Open today's briefing for the items that need you, or run a simulation in the Lab.",
   },
   briefing: {
     title: "Today's briefing",

@@ -50,8 +50,8 @@ function FetchingTimeline({ incident }: { incident: string }) {
 export function CaseTimeline({ incident, state }: { incident: string; state?: ApiState<EventsResponse> }) {
   return (
     <section className="case-timeline" aria-label="Case timeline" data-testid="case-timeline">
-      <h2 className="section-label">Case timeline</h2>
-      <p className="caption">Every step on this case, in the order it happened. Grouped by simulated day; times are when the action was taken.</p>
+      <h2 className="section-label">Case history</h2>
+      <p className="caption">Every step on this case, oldest first, grouped by simulated day.</p>
       <div aria-live="polite">
         {state ? <TimelineView state={state} incident={incident} /> : <FetchingTimeline incident={incident} />}
       </div>

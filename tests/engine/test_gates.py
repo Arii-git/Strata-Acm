@@ -96,7 +96,7 @@ def test_full_loop_and_audit_chain(client):
     assert all(o["provenance"] == "illustrative" for o in client.get("/outcomes").json()["items"])
     assert client.get("/time-to-action").json()["n"] >= 1
     assert state.verify_chain()["ok"]
-    state._C.execute("update audit_log set actor='tampered' where id=2")
+    state._C.execute("update audit_log set actor='tampered' where id=(select min(id) from audit_log)")
     state._C.commit()
     assert state.verify_chain()["ok"] is False
 

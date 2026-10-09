@@ -1,6 +1,6 @@
 # AGENTS.md — STRATA (read first, every session)
 
-You are building **STRATA**, a prototype for The Industry Games 2026 (sponsor: Altygen Biopharm, problem: Intelligent Business Operations & Customer Engagement). Team: **Arihant Chordia** and **Yogesh R Mehta**. The goal is 1st place. The project is **human-owned**: you are the force multiplier, not the founder.
+You are building **STRATA**, a prototype for The Industry Games 2026 (problem: Intelligent Business Operations & Customer Engagement). Team: **Arihant Chordia** and **Yogesh R Mehta**. The goal is 1st place. The project is **human-owned**: you are the force multiplier, not the founder.
 
 Source of truth, in this order: `docs/01_BLUEPRINT.md` → `contracts/*` (incl. `engagement_rules.yaml`) → this file → `docs/02_CODEX_MASTER_PROMPT.md` → `docs/03_LANE_PROMPTS.md`. If two disagree, follow the earlier one and write the conflict into `docs/OPEN_QUESTIONS.md`. Do not ask for permission; decide, record, continue.
 
@@ -12,7 +12,7 @@ Source of truth, in this order: `docs/01_BLUEPRINT.md` → `contracts/*` (incl. 
 ## 2. Honesty rules (the project's hardest constraint)
 - No invented metrics, users, partners, deployments, citations, validation or benchmarks. If a value is hypothetical, estimated, illustrative or synthetic, it is **labelled** with `provenance` ∈ {computed, synthetic, illustrative, assumption}.
 - Every KPI number and chart rendered in the UI (`Metric`, `ChartFrame`, `DataTable`) must come from a computed field or a named constant with a provenance tag (IDs, dates and timestamps are exempt; tables carry one provenance badge + caption). **No number may be hard-coded into UI/API to "match the deck".** Tests must recompute it. If the computed value differs from the deck, report it in `docs/DECK_DELTAS.md`; do not fudge the generator after the fact beyond the declared scenario parameters.
-- The UI always shows a `SYNTHETIC DATA — NOT ALTYGEN'S` chip. No claim of real-world performance anywhere. Banned phrases in UI/docs unless backed by a test: "guaranteed", "proven", "saves ₹", "X% more accurate", "real customers", "deployed at".
+- The UI always shows a `SYNTHETIC DATA` chip. No claim of real-world performance anywhere. Banned phrases in UI/docs unless backed by a test: "guaranteed", "proven", "saves ₹", "X% more accurate", "real customers", "deployed at".
 - LLM output may never introduce a number. LLM sentences must cite evidence IDs. See Blueprint §9 (Evidence-or-Silence).
 - Report evaluation honestly, including misses and hold-out seed results. Never tune on the hold-out seed. The hold-out is the same generator with a different random draw — say so on the Evaluation page; it is not independent validation.
 - Lab fast-forward outcomes are **scripted counterfactuals**: provenance `illustrative`, never presented as measured results. "Plan acceptance" is computed only from real human clicks (show n; "n/a" if none).
@@ -26,7 +26,7 @@ Source of truth, in this order: `docs/01_BLUEPRINT.md` → `contracts/*` (incl. 
 
 ## 4. Design rules
 - All colours, fonts, spacing, radii, motion come from `contracts/design-tokens.css` + `contracts/design-tokens.v2.css` (v2 = readability overrides, review 1) (copied to `apps/web/src/styles/tokens.css`). No hex literals elsewhere (lint rule). Re-skinning must be a one-file change.
-- Look: Altygen-branded enterprise console. Indigo sidebar, white surfaces on lavender-grey canvas, crimson only for "act now". 6 px corners, 1 px borders. **Forbidden:** gradients, glow, glassmorphism, emoji, sparkle/"AI" icons, rounded chat bubbles, purple-blue hero, default shadcn look, default Recharts look, stock images.
+- Look: Enterprise enterprise console. Indigo sidebar, white surfaces on lavender-grey canvas, crimson only for "act now". 6 px corners, 1 px borders. **Forbidden:** gradients, glow, glassmorphism, emoji, sparkle/"AI" icons, rounded chat bubbles, purple-blue hero, default shadcn look, default Recharts look, stock images.
 - Every page: first line is the question it answers; max 6 primary widgets (a table or tile strip counts as one); every KPI/chart wrapped in `<Metric>` / `<ChartFrame>` (tables: `<DataTable provenance caption>`) which **require** `meaning` and `implication` (rendered as 12 px `--ink-3` caption) and `provenance` (tiny badge). TypeScript must fail to compile without them.
 - Status is never colour-only (dot + text + position). Contrast ≥ 4.5:1 for text — `design-tokens.css` is already verified; a qa-lane test recomputes every text/background pair and fails the build on regression. Never use `--crimson-600` for text. Full keyboard operation; visible focus ring; `prefers-reduced-motion` respected.
 - Motion 120–220 ms ease-out; no bounce/parallax. Loading, empty and error states for every async view.

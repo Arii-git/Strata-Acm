@@ -1,11 +1,11 @@
 # START HERE — STRATA build pack
 
-**What we are building:** the STRATA Operational Intelligence Console for Altygen Biopharm (nephrology pharma) — your deck's detect → investigate → remember → act → learn loop as a working prototype, hero case Customer #4821, Altygen-branded enterprise UI, every number computed and explained. Full detail: `01_BLUEPRINT.md`.
+**What we are building:** the STRATA Operational Intelligence Console for the manufacturer (nephrology pharma) — your deck's detect → investigate → remember → act → learn loop as a working prototype, hero case Customer #4821, Enterprise enterprise UI, every number computed and explained. Full detail: `01_BLUEPRINT.md`.
 
 ## Five things you must know before you start
 1. **Time.** Your event is today (Oct 9 live build, Oct 10 pitches). The default scope tier is **Compact** (~10–12 h of Codex time). *Core* (~5–6 h) if you are short on time, *Full* (~20–24 h) only if you really have a full day. Add one line before the prompt to change it (Blueprint §11).
-2. **District = 05, confirmed.** The updated official problem-statements PDF (5 districts) lists Altygen Biopharm as **District 05**, matching your deck.
-3. **I could not see two things.** (a) Altygen's real internal tools — nothing public, so the UI is "Altygen-brand-native" (indigo `#211756`, crimson `#E5310E`, Poppins, measured from their site) and re-skinnable from one file; **ask the mentor which tools they use** (questions in Blueprint §1.1). (b) The judging rubric — the dashboard is behind your SRM login. Paste it to me if it's there.
+2. **District = 05, confirmed.** The updated official problem-statements PDF (5 districts) lists the manufacturer as **District 05**, matching your deck.
+3. **I could not see two things.** (a) the client's real internal tools — nothing public, so the UI is "brand-native" (indigo `#211756`, crimson `#E5310E`, Poppins, measured from their site) and re-skinnable from one file; **ask the mentor which tools they use** (questions in Blueprint §1.1). (b) The judging rubric — the dashboard is behind your SRM login. Paste it to me if it's there.
 4. **Human ownership.** Your deck's concept is locked. You told me to add features without asking, so Codex will build the P0/P1 additions in Blueprint §4 — that is a standing approval you can withdraw per feature at review (each is behind a flag). Codex also writes `docs/DEFEND_IT.md`: read it; anything you can't explain, cut. The Engineering Notebook and the memory/SOP items are **yours** to write.
 5. **Check the event rules first.** Ask the organisers whether pre-built plans, contracts and scaffolding prepared before the 24 h clock are allowed. If code must start from zero at the opening bell, keep this pack as *planning material* and start Codex when the clock starts.
 
@@ -25,7 +25,7 @@ git add -A; git commit -m "docs: add STRATA build pack"
 3. API keys are **optional for the prototype**: everything must work with `LLM_PROVIDER=none` (deterministic cited output, TF-IDF retrieval). Add one LLM key later if you want live agent narration; never paste keys into chat.
 4. Connect Playwright MCP and Context7 to Codex if you can (`04_TOOLKIT.md` §3).
 5. Start Codex in `E:\SRM\EVENTS\ACM_24hr\strata`, open `docs/02_CODEX_MASTER_PROMPT.md`, paste everything between the COPY lines. The default is Compact; to change it add one line first, e.g. *"Scope tier: Core."*
-6. While Codex builds, talk to the Altygen mentor and **write the answers in the Notebook** (Blueprint §1.1, §10.8).
+6. While Codex builds, talk to the the client mentor and **write the answers in the Notebook** (Blueprint §1.1, §10.8).
 
 ## What happens next
 - Codex runs Phases 0–4 and **stops** with `docs/REVIEW_REPORT.md`.

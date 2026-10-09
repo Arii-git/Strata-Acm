@@ -5,9 +5,9 @@ import { ProvenanceBadge } from "./Caption";
 export function PageHeader({ question, title, children }: { question: string; title: string; children?: React.ReactNode }) {
   return (
     <header className="page-header">
-      <div>
-        <div className="page-header__title">{title}</div>
-        <h1 className="page-header__question">{question}</h1>
+      <div className="page-header__text">
+        <h1 className="page-header__title">{title}</h1>
+        <p className="page-header__question">{question}</p>
       </div>
       {children ? <div className="page-header__actions">{children}</div> : null}
     </header>

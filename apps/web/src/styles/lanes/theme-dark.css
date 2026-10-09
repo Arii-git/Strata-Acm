@@ -1,0 +1,92 @@
+/* =====================================================================
+   STRATA | dark theme tokens (lane: shell-ui). Loaded LAST in app/layout.tsx.
+   Applied when <html data-theme="dark"> (set before paint by lib/theme/script.ts).
+   This is a token file: every colour token from tokens.css (+ the shell aliases in globals.css)
+   is redefined here; components keep using var(--…) and never branch on the theme.
+
+   Ramp logic: the indigo/crimson/green/amber/sky "strong" steps (600-900) become light tints so
+   they still work as TEXT on dark surfaces and as FILLS under --ink-inverse (which turns dark);
+   the "soft" steps (50-200) become deep tints used as backgrounds and hover fills.
+
+   Contrast (WCAG 2.1, computed; all text pairs >= 4.5:1):
+     ink        on canvas 15.7 · surface 14.5 · surface-2 13.7 · indigo-50 12.9
+     ink-2      on canvas 10.9 · surface 10.1 · surface-2  9.5 · indigo-50  8.9
+     ink-3      on canvas  6.9 · surface  6.3 · surface-2  6.0 · indigo-50  5.6 · indigo-100 5.0
+     indigo-600 (links) on surface 6.0 · indigo-700 7.3 · indigo-800 8.7
+     ink-inverse on indigo-800 9.3 · indigo-700 7.8 · indigo-600 6.4 · crimson-600 6.5 · green-600 8.5
+     sev fg/bg: healthy 8.6 · watch 7.4 · elevated 7.7 · high 8.4 · critical 7.0 ; crimson-700 on surface 7.8
+     sidebar: fg on bg 8.6 · strong on active 12.8 · fg on hover 7.5
+   --crimson-600 is still never used for text.
+   ===================================================================== */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* ---- brand ramps (inverted for dark) ---- */
+  --indigo-900: #ECEAFF;
+  --indigo-800: #B8B0F7;
+  --indigo-700: #A79FF2;
+  --indigo-600: #968DEC;
+  --indigo-200: #4B4484;
+  --indigo-100: #2D2856;
+  --indigo-50:  #242046;
+  --crimson-600: #FF6B4F;
+  --crimson-700: #FF9079;
+  --crimson-100: #3E1D1A;
+  --green-600:  #52C934;
+  --green-700:  #86DD69;
+  --green-100:  #15301A;
+  --amber-600:  #F2B55C;
+  --amber-100:  #382912;
+  --sky-600:    #86BDF2;
+  --sky-100:    #152A40;
+
+  /* ---- neutrals: deep indigo-charcoal canvas, slightly lighter surfaces, soft lines ---- */
+  --canvas:      #121022;
+  --surface:     #1A1830;
+  --surface-2:   #201D38;
+  --line:        #2E2A4A;
+  --line-strong: #423D66;
+  --ink:         #ECEAF7;
+  --ink-2:       #C6C3DC;
+  --ink-3:       #9D99BC;
+  --ink-inverse: #14112A;
+
+  /* ---- severity pairs, re-tuned for dark ---- */
+  --sev-healthy-fg:  var(--green-700);  --sev-healthy-bg:  var(--green-100);
+  --sev-watch-fg:    var(--sky-600);    --sev-watch-bg:    var(--sky-100);
+  --sev-elevated-fg: var(--amber-600);  --sev-elevated-bg: var(--amber-100);
+  --sev-high-fg:     #FFB870;           --sev-high-bg:     #3B2612;
+  --sev-critical-fg: #FF9580;           --sev-critical-bg: #421C17;
+
+  /* ---- elevation / focus ---- */
+  --shadow-pop: 0 6px 24px rgba(4, 3, 12, .55);
+  --focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--indigo-600);
+
+  /* ---- charts (EChart re-reads these when the theme changes) ---- */
+  --chart-1: var(--indigo-700);
+  --chart-2: var(--crimson-600);
+  --chart-3: var(--sky-600);
+  --chart-4: var(--amber-600);
+  --chart-5: var(--green-600);
+  --chart-grid: var(--line);
+  --chart-axis: var(--ink-3);
+
+  /* ---- shell aliases (globals.css) ---- */
+  --sb-bg:        #16132B;
+  --sb-fg:        #B4AFD3;
+  --sb-fg-strong: #F4F2FF;
+  --sb-hover:     #221E40;
+  --sb-active:    #2A2550;
+  --sb-line:      #262246;
+  --sb-focus:     #968DEC;
+  --veil:         #05040C;
+  --veil-opacity: .6;
+}
+
+/* sidebar sits on a near-canvas colour in dark, so give it an edge */
+:root[data-theme="dark"] .sidebar { border-right: 1px solid var(--sb-line); }
+/* the brand square stays the measured crimson so the mark reads the same in both themes */
+:root[data-theme="dark"] .brand-mark { background: var(--crimson-600); }
+/* images / line art drawn with currentColor keep working; native form controls follow color-scheme */
+:root[data-theme="dark"] input[type="checkbox"], :root[data-theme="dark"] input[type="radio"] { accent-color: var(--indigo-600); }

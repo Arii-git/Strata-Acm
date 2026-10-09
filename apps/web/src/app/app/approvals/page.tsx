@@ -1,85 +1,91 @@
 "use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
-import type { Approval, ListResponse } from "@/lib/api/types";
-import { qs, useApi } from "@/lib/api/client";
+import { useMemo, useState } from "react";
+import { Details, EmptyState, ErrorState, PageTemplate, buttonClass } from "@/components/ui";
+import { StrataLoader } from "@/components/ui/Loader";
 import {
-  CategoryChip, EmptyState, ErrorState, Loading, Metric, MetricGroup, PageTemplate, SeverityPill, TermHint, buttonClass,
-} from "@/components/ui";
-import { fmtINR, fmtNum } from "@/lib/format";
-import { personaLabel, usePersona } from "@/lib/persona";
-import type { WbIncidentSummary } from "@/components/features/workbench/shared";
+  LevelStrip, RiskLevelBadge, simClockText, useAgenticLevels, type AgenticItem, type RiskLevel,
+} from "@/components/features/agentic";
+import { usePersona } from "@/lib/persona";
+import { ApprovalRow } from "./ApprovalRow";
+
+/** Needs a person now: waiting, provisional (confirm/undo), escalated, or deferred by the agent with the plan still open. */
+function needsDecision(x: AgenticItem): boolean {
+  if (x.status === "awaiting_human" || x.status === "provisional" || x.status === "escalated") return true;
+  return x.status === "auto_decided" && x.plan_status === "awaiting_approval";
+}
+
+function byLevelThenDeadline(a: AgenticItem, b: AgenticItem): number {
+  return b.level - a.level || String(a.decision_deadline).localeCompare(String(b.decision_deadline));
+}
 
 export default function ApprovalsPage() {
-  const { persona, label } = usePersona();
-  const { data, error, loading, reload } = useApi<ListResponse<Approval>>(qs("/approvals", { persona }));
-  const cases = useApi<ListResponse<WbIncidentSummary>>("/incidents");
-  const items = useMemo(() => [...(data?.items ?? [])].sort((a, b) => (b.waiting_hours || 0) - (a.waiting_hours || 0)), [data]);
-  const byRef = useMemo(() => Object.fromEntries((cases.data?.items ?? []).map((c) => [c.ref, c])), [cases.data]);
+  const { persona } = usePersona();
+  const { data, error, loading, reload } = useAgenticLevels(persona);
+  const [only, setOnly] = useState<RiskLevel | null>(null);
 
-  const maxWait = items.reduce((m, a) => Math.max(m, a.waiting_hours || 0), 0);
-  const critical = items.filter((a) => a.severity === "critical").length;
+  const queue = useMemo(() => (data?.items ?? []).filter(needsDecision).sort(byLevelThenDeadline), [data]);
+  const handled = useMemo(() => (data?.items ?? []).filter((x) => !needsDecision(x)), [data]);
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const x of queue) c[String(x.level)] += 1;
+    return c;
+  }, [queue]);
+  const shown = only ? queue.filter((x) => x.level === only) : queue;
 
-  const glance = items.length ? (
-    <MetricGroup title="Waiting for a decision">
-      <Metric
-        id="approvals_waiting" label="Plans waiting" value={fmtNum(items.length)} tone={critical ? "critical" : "default"}
-        compare={critical ? `${critical} critical` : "none critical"}
-        meaning={`Plans awaiting a decision that ${label} can see.`}
-        implication={critical ? "Critical plans waiting: decide now." : "Each one is blocked until a named person decides."}
-        provenance="computed"
-      />
-      <Metric
-        id="oldest_wait_hours" label="Oldest wait" value={fmtNum(maxWait, 1)} unit="hours"
-        compare="Simulated clock, since the plan was drafted"
-        meaning="Decision debt: how long the oldest plan has been waiting."
-        implication="Waiting time adds directly to time-to-action."
-        provenance="computed"
-      />
-    </MetricGroup>
-  ) : undefined;
+  const next = queue.find((x) => x.status === "awaiting_human" && !x.deadline_passed);
+  const provisional = queue.filter((x) => x.status === "provisional").length;
+  const escalated = queue.filter((x) => x.status === "escalated").length;
+  const takeaway = !queue.length ? "Nothing is waiting for you."
+    : `${queue.length} case${queue.length === 1 ? "" : "s"} need${queue.length === 1 ? "s" : ""} a decision`
+      + (next ? `; next deadline ${simClockText(next.decision_deadline)} (${next.ref}, level ${next.level})` : "")
+      + (provisional ? `; ${provisional} agent step${provisional === 1 ? "" : "s"} to confirm or undo` : "")
+      + (escalated ? `; ${escalated} escalated` : "") + ".";
 
   return (
-    <PageTemplate explainKey="approvals" title="Approvals" question="What is waiting for a human decision, and for how long?" glance={glance}>
-      {loading && !data ? <Loading rows={6} /> : error ? <ErrorState error={error} onRetry={reload} /> : !items.length ? (
-        <EmptyState
-          title="Nothing waiting."
-          body="Plans appear here after an investigation drafts one. Open a case at the Detected stage and run its investigation."
-          action={<Link href="/app/incidents" className={buttonClass("secondary", "sm")}>Open the cases</Link>}
-        />
-      ) : (
-        <section aria-label="Plans waiting for a decision">
-          <ul className="approval-list" data-testid="approval-list">
-            {items.map((a) => {
-              const c = byRef[a.ref];
-              const needed = a.four_eyes ? 2 : 1;
-              return (
-                <li key={a.plan_id} className="approval-card" data-testid="approval-card">
-                  <div className="approval-card__head">
-                    {c ? <CategoryChip category={c.category} size="sm" /> : null}
-                    <SeverityPill severity={a.severity} />
-                    <span className="mono caption">{a.ref} · {a.plan_id}</span>
-                  </div>
-                  <div className="approval-card__title">{a.title}</div>
-                  <dl className="approval-card__facts">
-                    <div><dt>Requires</dt><dd>{personaLabel(a.requires_role)}</dd></div>
-                    <div>
-                      <dt><TermHint term="four_eyes" label="Four-eyes" /></dt>
-                      <dd>{a.four_eyes ? `Yes: two different approvers (${a.approvals_so_far} of ${needed} so far)` : `No: one approver (${a.approvals_so_far} of 1)`}</dd>
-                    </div>
-                    <div><dt>Waiting</dt><dd>{fmtNum(a.waiting_hours, 1)} h <span className="caption">(decision debt)</span></dd></div>
-                    <div><dt>₹ exposed</dt><dd>{fmtINR(a.value_at_stake)} <span className="caption">(exposure, not a forecast)</span></dd></div>
-                  </dl>
-                  <div>
-                    <Link href={`/app/incidents/${encodeURIComponent(a.ref)}?tab=todo`} className={buttonClass("primary", "sm")}>Review the plan and decide</Link>
-                  </div>
-                </li>
-              );
-            })}
+    <PageTemplate
+      explainKey="approvals"
+      title="Approvals"
+      question="What needs my decision, and what happens if I don't decide in time?"
+      glance={data && queue.length ? <LevelStrip counts={counts} selected={only} onSelect={setOnly}
+        caption="Cases waiting for a decision, by risk level. Press a level to show only that level." /> : undefined}
+      visual={data ? {
+        takeaway,
+        node: !queue.length ? (
+          <EmptyState title="Nothing waiting."
+            body="Cases appear here when Risk Triage gives them a level and a decision deadline."
+            action={<Link href="/app/incidents" className={buttonClass("secondary", "sm")}>Open the cases</Link>} />
+        ) : (
+          <ul className="aq" aria-label="Cases waiting for a decision, highest level first" data-testid="approval-list">
+            {shown.map((x) => <ApprovalRow key={x.ref} item={x} simNow={data.sim_now} onChanged={reload} />)}
           </ul>
-        </section>
-      )}
+        ),
+      } : undefined}
+    >
+      {loading && !data ? <StrataLoader label="Loading decisions" /> : null}
+      {error && !data ? <ErrorState error={error} onRetry={reload} /> : null}
+      {data ? (
+        <>
+          <p className="caption aq__clock">
+            Times use the simulated clock (now {simClockText(data.sim_now)}). Deadlines are set by the Business Head.{" "}
+            <Link href="/app/agents">How the agents decide</Link>
+          </p>
+          {handled.length ? (
+            <Details title={`Handled (${handled.length})`}>
+              <ul className="aq-done">
+                {handled.map((x) => (
+                  <li key={x.ref}>
+                    <RiskLevelBadge level={x.level} compact />
+                    <Link href={`/app/incidents/${encodeURIComponent(x.ref)}`}>{x.title}</Link>
+                    <span className="caption">{x.mode_line}</span>
+                  </li>
+                ))}
+              </ul>
+            </Details>
+          ) : null}
+        </>
+      ) : null}
     </PageTemplate>
   );
 }

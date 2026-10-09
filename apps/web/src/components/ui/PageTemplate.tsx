@@ -29,16 +29,16 @@ export interface PageTemplateProps {
 export function PageTemplate({ explainKey, title, question, headerActions, glance, visual, actions, children }: PageTemplateProps) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="page-template" data-testid="page-template">
+    <div className="page-template page-enter" data-testid="page-template">
       <header className="page-header">
-        <div>
-          <div className="page-header__title">{title}</div>
-          <h1 className="page-header__question">{question}</h1>
+        <div className="page-header__text">
+          <h1 className="page-header__title">{title}</h1>
+          <p className="page-header__question">{question}</p>
         </div>
         <div className="page-header__actions">
           {headerActions}
-          <button type="button" className="btn btn--secondary btn--sm" onClick={() => setOpen(true)} data-testid="explain-button">
-            <IconInfoCircle size={16} stroke={1.5} aria-hidden="true" /> Explain this page
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => setOpen(true)} data-testid="explain-button" aria-label="Explain this page" title="What this page shows and how to read it">
+            <IconInfoCircle size={16} stroke={1.5} aria-hidden="true" /> Explain
           </button>
         </div>
       </header>

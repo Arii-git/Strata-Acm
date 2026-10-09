@@ -64,7 +64,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                   <span>{i.label}</span>
                   <span className="palette__hint">{i.hint}</span>
                 </span>
-                <small>{i.section} · g {i.key}</small>
+                <small>{i.section ? `${i.section} · ` : ""}g {i.key}</small>
               </li>
             );
           })}

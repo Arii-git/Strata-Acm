@@ -1,0 +1,45 @@
+# Build context = repo root for both images. Keep it small and secret-free.
+
+# VCS / editors
+.git
+.gitattributes
+.vscode
+.idea
+.claude
+*.code-workspace
+
+# secrets: compose passes .env at runtime via env_file; it must never be baked into an image
+.env
+.env.*
+!.env.example
+
+# node / next
+**/node_modules
+**/.next
+**/out
+**/*.tsbuildinfo
+**/npm-debug.log*
+
+# python
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+
+# generated data + state (regenerated inside the container on first boot)
+data/store
+
+# tests, screenshots, playwright artifacts
+tests
+test-results
+playwright-report
+blob-report
+
+# large binaries not needed by either image
+**/*.pdf
+
+# the docker files themselves (changing them should not bust COPY layers)
+docker-compose.yml
+.dockerignore
+**/Dockerfile

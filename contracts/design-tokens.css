@@ -1,11 +1,11 @@
 /* =====================================================================
    STRATA | contracts/design-tokens.css | v0.1
-   "Altygen Console" theme. This is the ONLY place colours/type/spacing live.
-   Re-skinning to match Altygen's real internal tools (once a mentor tells us
+   "STRATA Console" theme. This is the ONLY place colours/type/spacing live.
+   Re-skinning to match the client's real internal tools (once a mentor tells us
    which ones they use) = edit THIS FILE ONLY. No hex values anywhere else.
 
    Provenance of brand values: measured from computed styles on
-   altygenbiopharm.com (indigo rgb(33,23,86), crimson rgb(229,49,14),
+   the client's public website (indigo rgb(33,23,86), crimson rgb(229,49,14),
    body grey rgb(69,69,69), green rgb(42,178,0), font Poppins).
    Everything else is a design decision, not a measurement.
 

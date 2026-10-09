@@ -19,12 +19,28 @@ function url(path: string): string {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/** Session token written by @/lib/auth (key `strata.token`). Read here directly to avoid an import cycle. */
+const TOKEN_KEY = "strata.token";
+function currentToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try { return window.localStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
+
+/** JSON headers plus `Authorization: Bearer <token>` when the user is signed in. Use for raw fetch/EventSource callers. */
+export function authHeaders(json = false): Record<string, string> {
+  const h: Record<string, string> = { Accept: "application/json" };
+  if (json) h["Content-Type"] = "application/json";
+  const t = currentToken();
+  if (t) h.Authorization = `Bearer ${t}`;
+  return h;
+}
+
 async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url(path), {
       method,
-      headers: body === undefined ? { Accept: "application/json" } : { "Content-Type": "application/json", Accept: "application/json" },
+      headers: authHeaders(body !== undefined),
       body: body === undefined ? undefined : JSON.stringify(body),
       cache: "no-store",
       signal,
@@ -49,6 +65,8 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
 export const apiGet = <T,>(path: string, signal?: AbortSignal) => request<T>("GET", path, undefined, signal);
 export const apiPost = <T,>(path: string, body?: unknown) => request<T>("POST", path, body ?? {});
 export const apiPatch = <T,>(path: string, body?: unknown) => request<T>("PATCH", path, body ?? {});
+export const apiPut = <T,>(path: string, body?: unknown) => request<T>("PUT", path, body ?? {});
+export const apiDelete = <T,>(path: string) => request<T>("DELETE", path);
 
 /** Append query params, skipping null/undefined/"" values. qs("/risks", {persona}) → "/risks?persona=…" */
 export function qs(path: string, params: Record<string, string | number | boolean | null | undefined>): string {

@@ -36,7 +36,7 @@ Rule: use the smallest set that makes the build faster and the demo safer. Anyth
 | **Context7 (docs MCP)** | gives the agent current Next.js / FastAPI / React Flow / ECharts docs so it does not code against stale APIs | high |
 | **Postgres/Supabase MCP** | only for Phase 5; in the prototype use local scripts instead | later |
 | **GitHub MCP / `gh`** | commits, tags, PR-less workflow; optional | low |
-| **Figma MCP** | only if you get real Altygen tool screenshots/tokens to match | optional |
+| **Figma MCP** | only if you get real the client tool screenshots/tokens to match | optional |
 
 I did not install or test any of these in your environment.
 

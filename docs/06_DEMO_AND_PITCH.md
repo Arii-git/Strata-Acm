@@ -3,7 +3,7 @@
 This is scaffolding. The story must be yours — add what you actually tried and changed (Engineering Notebook). Pitch length and format are **[UNKNOWN]**; the script below is a 5-minute version you can cut to 3.
 
 ## 1. The story (your Observation → Insight → Idea → Build → Experiments → Results → Impact)
-- **Observation:** at companies like Altygen, signals live in separate systems and people join the dots by hand (your slide 2). *[Add your own observation: who did you talk to, what did the mentor say?]*
+- **Observation:** at companies like the client, signals live in separate systems and people join the dots by hand (your slide 2). *[Add your own observation: who did you talk to, what did the mentor say?]*
 - **Insight:** the gap is between signal, decision and action — not a lack of data.
 - **Idea:** an operational nervous system that anticipates, explains, remembers, and only acts with human approval.
 - **Build:** this prototype (synthetic data, computed live).
@@ -14,7 +14,7 @@ This is scaffolding. The story must be yours — add what you actually tried and
 ## 2. Five-minute live demo (rehearse until it takes 4:30)
 | Time | Screen | Say / do |
 |---|---|---|
-| 0:00 | Landing | "STRATA — detect problems before they become business losses. Built for Altygen's operations team." Enter. |
+| 0:00 | Landing | "STRATA — detect problems before they become business losses. Built for the client's operations team." Enter. |
 | 0:20 | Briefing | Greeting + overnight summary. "N need you today; Strata held back M more — here is why." (Alert Budget; read N and M from the screen) |
 | 0:50 | Risk Register → #4821 | "No single metric is alarming. Orders −31 %, complaints +47 %, response +22 %, interaction −40 %. Four systems, one customer. Risk 91." *(read the computed values on screen, not these)* |
 | 1:30 | Workbench → Agent trace | "Investigator cites its evidence — stock cover fell below three days and the supplier's date slipped twice. Every sentence has an evidence chip; Strata drops what it can't cite." |
@@ -42,7 +42,7 @@ Landing (10 s) → Risk Register #4821 evidence (40 s) → Workbench trace + Mem
 - **"Why these signals?"** From what a nephrology marketer actually fears: refills slipping on chronic therapy, bad batches, near-expiry stock, late payers, uncovered doctors. *[Add what the mentor told you.]*
 - **"How would it connect to our systems?"** REST/CSV connectors on the Sources page; nothing is replaced; the field mapping is a config file.
 - **"Who is the 'customer' here?"** A B2B channel account — stockist, chemist chain, hospital pharmacy or nephrology clinic (definition in `contracts/engagement_rules.yaml`). Prescribers and downstream stock-outs appear as signals about an account; no patient data is used.
-- **"Is this a management platform or an analytics layer?"** An intelligence layer with an action loop on top of the systems Altygen already has: it detects, explains, proposes and tracks — it does not replace the ERP/CRM. Within the prototype it also does the day-to-day coordination the brief asks for (tasks, handoff notes, standing routines), all simulated.
+- **"Is this a management platform or an analytics layer?"** An intelligence layer with an action loop on top of the systems the client already has: it detects, explains, proposes and tracks — it does not replace the ERP/CRM. Within the prototype it also does the day-to-day coordination the brief asks for (tasks, handoff notes, standing routines), all simulated.
 - **"Does it scale?"** It is a single-tenant prototype. `npm run scale` measures engine time at 10× the account count on this machine (read the number from the report); we make no production-scale claim. The data-source contract and the Phase 5 hosted version show the path.
 - **"Show me it fail."** Lab → inject the stale-feed scenario (S13) → Data Health Guard suppresses it and the Sources page shows a data-quality notice instead of a false alarm. *(Use only if the Lab S13 gate passed; otherwise skip.)*
 
@@ -52,7 +52,7 @@ Landing (10 s) → Risk Register #4821 evidence (40 s) → Workbench trace + Mem
 3. Slide 15: replace the illustrative benchmark with the measured Time-to-Action once you have it; keep "illustrative" wording for the 15-minute baseline.
 4. Slide 7/8/12 numbers: if the computed values differ, update the slide (see `docs/DECK_DELTAS.md` after the build).
 5. Add one slide: "What we measured (hold-out) and what we missed."
-6. Add one slide: "What Altygen told us" once the mentor conversation happens.
+6. Add one slide: "What the client told us" once the mentor conversation happens.
 
 ## 5. Defend-it drill
 Read `docs/DEFEND_IT.md` aloud, one feature each. Anything either of you cannot explain in 20 seconds gets cut from the demo path. Judges can tell when a team can't defend its own build.

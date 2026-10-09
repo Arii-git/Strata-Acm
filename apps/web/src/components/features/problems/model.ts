@@ -1,6 +1,7 @@
 import { CATEGORY, STAGES, STAGE_INDEX, type CategoryKey, type StageKey } from "@config/taxonomy";
 import type { HeldBack, Kind, Severity } from "@/lib/api/types";
 import { personaLabel } from "@/lib/persona";
+import { humanize } from "@/lib/format";
 
 /** Incident summary as the engine returns it (with the taxonomy fields from docs/API.md). */
 export interface ProblemRow {
@@ -43,4 +44,10 @@ export const categoryKey = (c: string): CategoryKey => (c in CATEGORY ? (c as Ca
 /** Minimum-severity filter: "high" keeps critical + high. */
 export function atLeast(sev: Severity, min: Severity | ""): boolean {
   return !min || sevRank(sev) >= sevRank(min);
+}
+
+/** One plain line of why: the investigated cause if known, else the likely driver, with how many systems agree. */
+export function reasonText(r: Pick<ProblemRow, "cause" | "driver" | "n_sources">): string {
+  const why = r.cause && r.cause !== "not_investigated" ? `cause: ${humanize(r.cause).toLowerCase()}` : r.driver ? `likely driver: ${r.driver}` : "not yet investigated";
+  return `${r.n_sources === 1 ? "1 system" : `${r.n_sources} systems agree`} · ${why}`;
 }

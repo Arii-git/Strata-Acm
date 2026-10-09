@@ -6,7 +6,10 @@ import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const srcDir = join(root, "apps", "web", "src");
-const allowed = join(srcDir, "styles", "tokens.css");
+const allowed = new Set([
+  join(srcDir, "styles", "tokens.css"),
+  join(srcDir, "styles", "lanes", "theme-dark.css")
+]);
 const exts = new Set([".ts", ".tsx", ".css", ".js", ".jsx", ".mjs"]);
 const HEX = /#[0-9a-fA-F]{3,8}\b/g;
 const RGB = /\brgba?\(/g;
@@ -17,7 +20,7 @@ function walk(dir) {
     const p = join(dir, name);
     const st = statSync(p);
     if (st.isDirectory()) { walk(p); continue; }
-    if (p === allowed) continue;
+    if (allowed.has(p)) continue;
     const ext = name.slice(name.lastIndexOf("."));
     if (!exts.has(ext)) continue;
     readFileSync(p, "utf8").split(/\r?\n/).forEach((line, i) => {

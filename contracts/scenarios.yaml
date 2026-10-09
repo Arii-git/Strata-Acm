@@ -13,7 +13,7 @@ sim:
   history_weeks: 104            # two years, so seasonality (S11) has a prior year to learn from
   accounts: 240
   regions: ["Delhi NCR", "Haryana", "Punjab", "UP West", "Rajasthan East", "Uttarakhand"]
-  products_catalog_mode: "generic"   # DEFAULT generic (e.g. "Phosphate binder 800 mg, SKU-CKD-01"). 'catalog' (opt-in) may use up to 8 names from Altygen's public list for background SKUs ONLY — never in S01, S04, S05, S07 (no fake shortages/quality events/payment stress attached to a real brand).
+  products_catalog_mode: "generic"   # DEFAULT generic (e.g. "Phosphate binder 800 mg, SKU-CKD-01"). 'catalog' (opt-in) may use up to 8 names from the client's public list for background SKUs ONLY — never in S01, S04, S05, S07 (no fake shortages/quality events/payment stress attached to a real brand).
   selector_rank: "rank=N inside a selector = N-th account by baseline 12-week order value, descending, 1-indexed, ties broken by account id"
   noise: "log-normal order noise, weekly seasonality, festival-season index, random account-level drift"
 
@@ -86,108 +86,3 @@ scenarios:
       routed_to: qa_head
       four_eyes: true
       auto_action_allowed: false
-
-  - id: S05
-    title: "Single complaint that may describe an adverse event"
-    kind: risk
-    truth_cause: batch_quality
-    accounts: ["selector: 1 hospital_pharmacy"]
-    onset_days_before_now: 2
-    injected:
-      - {table: complaints, effect: "free text mentioning patient symptoms after use (synthetic, non-graphic)"}
-    expected:
-      detected: true
-      regulatory_sensitive: true
-      routed_to: qa_head
-      auto_action_allowed: false
-      note: "Strata must only ROUTE. It must not diagnose, advise clinically, or draft patient-facing text."
-
-  - id: S06
-    title: "Prescriber / field coverage decay at a hospital account"
-    kind: risk
-    truth_cause: field_coverage_gap
-    accounts: ["selector: type=hospital_pharmacy, rank=2"]
-    onset_days_before_now: 42
-    injected:
-      - {table: account_interactions, effect: "last nephrologist visit gap 18d -> 61d; hospital order volume flat then -18%"}
-    expected: {detected: true, severity: elevated, cause: field_coverage_gap}
-
-  - id: S07
-    title: "Payment stress cascade"
-    kind: risk
-    truth_cause: payment_stress
-    accounts: ["selector: type=stockist, tier=A, rank=5"]
-    onset_days_before_now: 30
-    injected:
-      - {table: receivables, effect: "overdue ratio 4% -> 27%"}
-      - {table: orders, effect: "volume -22%"}
-      - {table: complaints, effect: "billing-kind complaints x3"}
-    expected: {detected: true, severity: high, cause: payment_stress, min_sources: 3}
-
-  - id: S08
-    title: "Rep vacancy drift across a territory"
-    kind: risk
-    truth_cause: field_coverage_gap
-    accounts: ["selector: 14 accounts of one rep"]
-    onset_days_before_now: 25
-    injected:
-      - {table: reps, effect: "rep leaves (left_on = onset); no replacement"}
-      - {table: account_interactions, effect: "touchpoints -55% for the 14 accounts"}
-    expected: {detected: true, scope: region_or_rep, cause: field_coverage_gap}
-
-  - id: S09
-    title: "Opportunity: hospital growth with a complementary-product gap"
-    kind: opportunity
-    truth_cause: demand_shift
-    accounts: ["selector: type=hospital_pharmacy, rank=1"]
-    onset_days_before_now: 40
-    injected:
-      - {table: orders, effect: "+38% in renal-anemia and CKD-MBD lines; zero purchases of a complementary renal-nutrition line"}
-    expected: {detected: true, kind: opportunity, action_family: "targeted cross-sell visit + sample plan"}
-
-  - id: S10
-    title: "Regional support capacity dip"
-    kind: risk
-    truth_cause: support_capacity
-    accounts: ["selector: all accounts in one region"]
-    onset_days_before_now: 14
-    injected:
-      - {table: support_interactions, effect: "median response +60% for that region for 14 days"}
-    expected: {detected: true, scope: region, cause: support_capacity, note: "must be ONE regional incident, not 40 account incidents"}
-
-  # ----------------- decoys: Strata must NOT raise incidents -----------------
-  - id: S11
-    title: "DECOY: festival-season dip across the whole portfolio"
-    kind: decoy
-    injected:
-      - {table: orders, effect: "-12..18% for all accounts in a 2-week window, matching prior-year seasonality"}
-    expected: {detected: false, note: "absorbed by seasonality index; any per-account incident from this is a false alarm"}
-
-  - id: S12
-    title: "DECOY: one-off bulk order spike"
-    kind: decoy
-    accounts: ["selector: 2 stockists"]
-    injected:
-      - {table: orders, effect: "single week +180% then back to baseline"}
-    expected: {detected: false, note: "persistence rule: opportunity requires >=3 weeks"}
-
-  - id: S13
-    title: "DECOY (LAB-INJECTED ONLY, not in base seeds): stale + duplicated order feed"
-    kind: decoy
-    applies_to: "created by data/lab_injectors.py on a COPY of the state, so it cannot suppress the hero in the base seeds"
-    injected:
-      - {table: source_feeds, effect: "orders feed last_ingested 9h ago, duplicate_ratio 0.14"}
-      - {table: orders, effect: "duplicate rows for 20 accounts"}
-    expected: {detected: false, note: "Data Health Guard suppresses the affected signals and raises a data_quality notice on the Sources page only; tested in Phase 4 via the Lab injector"}
-
-memory_seed:
-  incidents_to_author: 24          # INC-001..INC-024 (DRAFT, team to review/replace)
-  must_include:
-    - ref: INC-017
-      cause: supplier_delay
-      account_type: stockist
-      resolution: "Reallocate inventory from lower-priority accounts, escalate supplier, contact customer"
-      outcome: customer_retained
-      note: "This is the match shown on deck slide 8."
-  sops_to_author: 10               # SOP-01..SOP-10 (supplier delay, batch complaint triage, near-expiry redistribution, credit hold, rep-vacancy cover, support surge, cross-sell visit, data-feed incident, AE routing, escalation matrix)
-  authoring_rule: "Every memory item is written as DRAFT with authored_by='DRAFT - TEAM TO REVIEW'. Arihant/Yogesh must review and rewrite at least the 6 items used in the demo path (INC-017, SOP-01, SOP-02, SOP-03, SOP-09, SOP-10) before the pitch."

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { IconAlertTriangle, IconInbox } from "@tabler/icons-react";
 import { Button } from "./Button";
+import { StrataLoader } from "./Loader";
 
 /**
  * Empty state. Always say what to do next: pass `next` (plain sentence) and/or an `action` button/link.
@@ -37,14 +38,14 @@ export function ErrorState({ error, onRetry, title = "Could not load this view",
   );
 }
 
-/** Skeleton rows; no spinner. Announced once as a polite status; the region is aria-busy while loading. */
+/**
+ * Loading: the STRATA loop loader, centred in a block roughly as tall as the content it stands in for
+ * (`rows`), so the page does not jump when data arrives. The loader itself is the polite status.
+ */
 export function Loading({ rows = 5, label = "Loading" }: { rows?: number; label?: string }) {
   return (
-    <div className="skeleton" role="status" aria-live="polite" aria-busy="true">
-      <span className="sr-only">{label}…</span>
-      {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="skeleton__row" aria-hidden="true" style={{ width: `${100 - ((i * 13) % 35)}%` }} />
-      ))}
+    <div className="loading-block" aria-busy="true" style={{ minHeight: `${Math.min(Math.max(rows, 3), 10) * 32}px` }}>
+      <StrataLoader size="md" label={label} />
     </div>
   );
 }

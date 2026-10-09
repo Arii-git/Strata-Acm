@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { CommandPalette } from "./CommandPalette";
 import { NAV_ITEMS } from "./nav";
 import { GuidedBar, GuidedProvider, useGuided } from "@/components/features/guided";
+import { AssistantDock } from "@/components/features/assistant";
 
 const COLLAPSE_KEY = "strata.sidebar.collapsed";
 
@@ -26,6 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function ShellFrame({ children }: { children: React.ReactNode }) {
   const guided = useGuided();
   const router = useRouter();
+  const pathname = usePathname() ?? "/app";
   const [collapsed, setCollapsed] = useState(false);
   const [palette, setPalette] = useState(false);
   const gPending = useRef<number | null>(null);
@@ -71,11 +73,13 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
       <div className="shell__main">
         <TopBar onOpenPalette={() => setPalette(true)} />
         <main id="main" className="shell__content" tabIndex={-1}>
-          <div className="shell__inner">{children}</div>
+          {/* keyed on the route: a quiet fade + 6px rise on every page change (instant with reduced motion) */}
+          <div className="shell__inner page-enter" key={pathname}>{children}</div>
         </main>
       </div>
       <GuidedBar />
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
+      <AssistantDock />
     </div>
   );
 }
