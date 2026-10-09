@@ -1,205 +1,71 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import {
-  Card, Button, buttonClass, SeverityPill, StatusPill, ProvenanceBadge, ErrorState, Caption, Details, Metric, MetricGroup, PageTemplate,
-} from "@/components/ui";
-import { useViewMode } from "@/lib/viewmode";
-import { useApi, apiPost, apiGet } from "@/lib/api/client";
-import { fmtDate, fmtNum, humanize } from "@/lib/format";
-import type { Severity } from "@/lib/api/types";
+import { useEffect, useState } from "react";
+import { ErrorState, Metric, MetricGroup, PageTemplate, Tabs } from "@/components/ui";
+import { StrataLoader } from "@/components/ui/Loader";
+import { useApi } from "@/lib/api/client";
+import { fmtNum } from "@/lib/format";
+import { CompareView } from "@/components/features/lab/CompareView";
+import { LiveLoop } from "@/components/features/lab/LiveLoop";
+import { ScenarioPicker } from "@/components/features/lab/ScenarioPicker";
+import { SimPlayer } from "@/components/features/lab/SimPlayer";
+import type { SimCatalog } from "@/components/features/lab/types";
 
-interface HealthResp { mode: "live" | "replay"; sim_now: string }
-interface InjectResp { run_id: string; account_id: number; account_name: string; incident_ref: string | null; severity: Severity | null; risk_score: number | null }
-interface InvestigateResp { cause: string | null; cause_confidence?: number | null; run_id?: string }
-interface IncidentState { status: string; plan: { id: string; status: string } | null }
-interface AdvanceResp {
-  sim_now: string; outcomes_recorded: number; memory_written: string[];
-  routine_outputs?: { routine_id: string; outputs: string[] }[];
+type View = { kind: "pick" } | { kind: "play"; id: string } | { kind: "compare"; category: string };
+
+/** Deep links: /app/lab?scenario=<id> opens a scenario, /app/lab?compare=<category> opens the comparison. */
+function readView(): View {
+  if (typeof window === "undefined") return { kind: "pick" };
+  const q = new URLSearchParams(window.location.search);
+  const id = q.get("scenario");
+  const cat = q.get("compare");
+  return id ? { kind: "play", id } : cat ? { kind: "compare", category: cat } : { kind: "pick" };
 }
 
-function StepCard({ n, title, caption, done, children }: { n: number; title: string; caption: string; done?: boolean; children: React.ReactNode }) {
-  return (
-    <Card
-      title={<span className="row"><span className="mono" aria-hidden style={{ border: "1px solid var(--line-strong)", borderRadius: "var(--r-pill)", minWidth: 24, height: 24, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-12)" }}>{n}</span>Step {n}: {title}</span>}
-      actions={done ? <StatusPill status="done" tone="ok" label="Done" /> : null}
-    >
-      <Caption meaning={caption} />
-      <div className="stack" style={{ marginTop: "var(--sp-3)" }}>{children}</div>
-    </Card>
-  );
+function writeView(v: View) {
+  const q = v.kind === "play" ? `?scenario=${encodeURIComponent(v.id)}` : v.kind === "compare" ? `?compare=${encodeURIComponent(v.category)}` : "";
+  window.history.replaceState(null, "", `/app/lab${q}`);
 }
-
-function errText(e: unknown) { return e instanceof Error ? e : new Error(String(e)); }
 
 export default function LabPage() {
-  const { mode } = useViewMode();
-  const health = useApi<HealthResp>("/health");
-  const replay = health.data?.mode === "replay";
+  const catalog = useApi<SimCatalog>("/sim/catalog");
+  const [view, setView] = useState<View>({ kind: "pick" });
+  const [industry, setIndustry] = useState("all");
+  const [tab, setTab] = useState("library");
 
-  const [inject, setInject] = useState<InjectResp | null>(null);
-  const [inv, setInv] = useState<InvestigateResp | null>(null);
-  const [incState, setIncState] = useState<IncidentState | null>(null);
-  const [adv, setAdv] = useState<AdvanceResp | null>(null);
-  const [resetDone, setResetDone] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [err, setErr] = useState<{ step: string; error: Error } | null>(null);
+  useEffect(() => { setView(readView()); }, []);
+  const go = (v: View) => { setView(v); setTab("library"); writeView(v); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
-  const run = async (step: string, fn: () => Promise<void>) => {
-    setBusy(step); setErr(null);
-    try { await fn(); } catch (e) { setErr({ step, error: errText(e) }); } finally { setBusy(null); }
-  };
-
-  const ref = inject?.incident_ref ?? null;
-
-  const doInject = () => run("inject", async () => {
-    const r = await apiPost<InjectResp>("/lab/inject", {});
-    setInject(r); setInv(null); setIncState(null); setAdv(null); setResetDone(false);
-  });
-  const doInvestigate = () => run("investigate", async () => {
-    if (!ref) return;
-    setInv(await apiPost<InvestigateResp>(`/incidents/${encodeURIComponent(ref)}/investigate`, {}));
-  });
-  const checkApproval = () => run("approve", async () => {
-    if (!ref) return;
-    setIncState(await apiGet<IncidentState>(`/incidents/${encodeURIComponent(ref)}`));
-  });
-  const doAdvance = () => run("advance", async () => {
-    setAdv(await apiPost<AdvanceResp>("/lab/advance", { days: 14 }));
-    health.reload();
-  });
-  const doReset = () => {
-    if (!window.confirm("Reset simulated state? This clears injected scenarios, investigations, approvals, tasks, outcomes and the simulated clock. Notebook entries and human-authored memory are never deleted.")) return;
-    run("reset", async () => {
-      await apiPost("/lab/reset", {});
-      setInject(null); setInv(null); setIncState(null); setAdv(null); setResetDone(true);
-      health.reload();
-    });
-  };
-
-  const stepErr = (s: string) => (err?.step === s ? <ErrorState error={err.error} title="That step did not complete" /> : null);
-  const approved = incState?.plan?.status === "approved" || incState?.status === "executing" || incState?.status === "resolved";
-
-  const done = [!!inject, !!inv, approved, !!adv].filter(Boolean).length;
-  const takeaway = !inject ? "Step 1 of 4: inject the supplier-delay pattern into a healthy stockist to start the loop."
-    : !ref ? "The injected pattern was not detected; reset and try again."
-    : !inv ? `Detected as ${ref}${inject.severity ? ` (${inject.severity})` : ""}. Step 2 of 4: investigate it.`
-    : !approved ? `Likely cause: ${inv.cause ? humanize(inv.cause) : "undetermined"}. Step 3 of 4: a human approves the plan.`
-    : !adv ? `${ref} plan approved. Step 4 of 4: fast-forward 14 simulated days to record the (scripted) outcome.`
-    : `Loop closed: ${fmtNum(adv.outcomes_recorded)} outcome${adv.outcomes_recorded === 1 ? "" : "s"} recorded (illustrative), ${fmtNum(adv.memory_written.length)} memory item${adv.memory_written.length === 1 ? "" : "s"} written.`;
+  const c = catalog.data;
+  const library = catalog.error ? <ErrorState error={catalog.error} onRetry={catalog.reload} />
+    : !c ? <div className="lab-loading"><StrataLoader size="lg" label="Loading the scenario library" /></div>
+    : view.kind === "play" ? <SimPlayer key={view.id} scenarioId={view.id} onExit={() => go({ kind: "pick" })} onCompare={(category) => go({ kind: "compare", category })} />
+    : view.kind === "compare" ? <CompareView category={view.category} onBack={() => go({ kind: "pick" })} onOpen={(id) => go({ kind: "play", id })} />
+    : <ScenarioPicker catalog={c} industry={industry} onIndustry={setIndustry} onPick={(s) => go({ kind: "play", id: s.id })} />;
 
   return (
     <PageTemplate
       explainKey="lab"
       title="Simulation Lab"
-      question="Show me it working on something new."
-      glance={
-        <MetricGroup title="Loop progress">
-          <Metric id="lab_steps_done" label="Steps done" value={fmtNum(done)} unit="of 4 steps"
-            compare="inject → investigate → approve → fast-forward"
-            meaning="How far this Lab run has gone through the loop, counted from the steps below."
-            implication={done < 4 ? "Do the next step below." : "Check Outcomes and Memory for what was recorded."}
-            provenance="computed" next={done === 4 ? { label: "See Outcomes", href: "/app/outcomes" } : undefined} />
+      question="What happens to a business when something goes wrong, with and without STRATA?"
+      glance={view.kind === "pick" && c ? (
+        <MetricGroup title="Scenario library">
+          <Metric label="Scenarios" value={fmtNum(c.scenarios.length)} unit="ready to run"
+            meaning="Business problems you can play out week by week, from floods to price wars."
+            implication="Pick one below and watch it unfold." provenance="illustrative" />
+          <Metric label="Business types" value={fmtNum(c.industries.length)} unit="industries"
+            meaning="Pharma, FMCG, manufacturing, e-commerce, logistics and food each get their own versions."
+            implication="Filter by the type of company you care about." provenance="illustrative" />
+          <Metric label="Kinds of issue" value={fmtNum(c.categories.length)} unit="issue types"
+            meaning="Disasters, late shipments, damage in transit, supplier failure, recalls, strikes and more."
+            implication="Open any issue type to compare it across industries." provenance="illustrative" />
         </MetricGroup>
-      }
-      visual={{
-        takeaway,
-        node: (
-          <div className="stack">
-      <div role="note" style={{ border: "1px solid var(--line-strong)", borderLeft: "4px solid var(--amber-600)", background: "var(--surface)", borderRadius: "var(--r-md)", padding: "var(--sp-3) var(--sp-4)", fontSize: "var(--fs-13)" }}>
-        <div className="row" style={{ flexWrap: "wrap" }}>
-          <span style={{ fontWeight: 600 }}>Mode: {health.data ? humanize(health.data.mode) : "…"}</span>
-          {health.data ? <span className="muted">· Simulated clock {fmtDate(health.data.sim_now, true)}</span> : null}
-        </div>
-        <p style={{ margin: "var(--sp-1) 0 0" }}>
-          {replay
-            ? "Replay mode: only pre-recorded runs are available. Injecting new scenarios may be unavailable."
-            : "Everything here runs on synthetic data and a simulated clock. Fast-forward outcomes are scripted counterfactuals, not measured results. In replay mode only pre-recorded runs are available."}
-        </p>
-      </div>
-
-      <StepCard n={1} title="Inject" done={!!inject}
-        caption="Plants the S01 supplier-delay pattern into a healthy tier-A stockist that has no open incident. The detector then re-scans and should raise a new incident on its own.">
-        <div className="row"><Button variant="primary" onClick={doInject} disabled={busy !== null}>{busy === "inject" ? "Injecting…" : "Inject supplier-delay pattern (S01 template) into a healthy stockist"}</Button></div>
-        {stepErr("inject")}
-        {inject ? (
-          <dl style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "var(--sp-1) var(--sp-3)", fontSize: "var(--fs-13)", margin: 0 }}>
-            <dt className="muted">Lab run</dt><dd style={{ margin: 0 }} className="mono">{inject.run_id}</dd>
-            <dt className="muted">Account</dt><dd style={{ margin: 0 }}><Link href={`/app/accounts/${inject.account_id}`}>{inject.account_name}</Link></dd>
-            <dt className="muted">New incident</dt>
-            <dd style={{ margin: 0 }}>{inject.incident_ref ? <Link className="mono" href={`/app/incidents/${inject.incident_ref}`}>{inject.incident_ref}</Link> : <span style={{ color: "var(--crimson-700)" }}>Not detected (the detector did not raise an incident)</span>}</dd>
-            <dt className="muted">Severity</dt><dd style={{ margin: 0 }}>{inject.severity ? <SeverityPill severity={inject.severity} /> : "n/a"}</dd>
-            <dt className="muted">Risk score</dt><dd style={{ margin: 0 }} className="num">{inject.risk_score === null ? "n/a" : fmtNum(inject.risk_score)} <ProvenanceBadge provenance="computed" /></dd>
-          </dl>
-        ) : null}
-      </StepCard>
-
-      <StepCard n={2} title="Investigate" done={!!inv}
-        caption="Runs the agent pipeline on the new incident: it tests cause hypotheses against the evidence and retrieves similar past cases from memory.">
-        <div className="row" style={{ flexWrap: "wrap" }}>
-          <Button onClick={doInvestigate} disabled={!ref || busy !== null}>{busy === "investigate" ? "Investigating…" : "Investigate"}</Button>
-          {ref ? <Link className={buttonClass("ghost", "sm")} href={`/app/incidents/${ref}?tab=trace`}>Open agent trace</Link> : <span className="caption">Inject first.</span>}
-        </div>
-        {stepErr("investigate")}
-        {inv ? (
-          <p style={{ margin: 0, fontSize: "var(--fs-14)" }}>
-            Most likely cause: <strong>{inv.cause ? humanize(inv.cause) : "undetermined"}</strong>
-            {typeof inv.cause_confidence === "number" ? <span className="muted"> (confidence {fmtNum(inv.cause_confidence * 100)} / 100)</span> : null}
-          </p>
-        ) : null}
-      </StepCard>
-
-      <StepCard n={3} title="Approve" done={approved}
-        caption="A human must approve the plan in the incident's Plan tab. Strata never approves its own plans; approval creates simulated tasks and drafts only.">
-        <div className="row" style={{ flexWrap: "wrap" }}>
-          {ref ? <Link className={buttonClass("primary")} href={`/app/incidents/${ref}?tab=plan`}>Open the Plan tab to approve</Link> : <span className="caption">Inject and investigate first.</span>}
-          <Button size="sm" variant="ghost" onClick={checkApproval} disabled={!ref || busy !== null}>Check approval status</Button>
-        </div>
-        {stepErr("approve")}
-        {incState ? <p style={{ margin: 0, fontSize: "var(--fs-13)" }}>Incident status: <strong>{humanize(incState.status)}</strong>{incState.plan ? <> · Plan <span className="mono">{incState.plan.id}</span>: {humanize(incState.plan.status)}</> : " · No plan yet"}</p> : null}
-      </StepCard>
-
-      <StepCard n={4} title="Fast-forward" done={!!adv}
-        caption="Moves the simulated clock 14 days. Executing incidents get scripted after-values, outcomes are written to memory, and approved standing routines run.">
-        <div className="row"><Button onClick={doAdvance} disabled={busy !== null}>{busy === "advance" ? "Advancing…" : "Advance 14 simulated days"}</Button></div>
-        {stepErr("advance")}
-        {adv ? (
-          <div className="stack" style={{ gap: "var(--sp-2)" }}>
-            <div className="row"><ProvenanceBadge provenance="illustrative" /><span className="caption">Scripted counterfactual, not a measured result.</span></div>
-            <dl style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "var(--sp-1) var(--sp-3)", fontSize: "var(--fs-13)", margin: 0 }}>
-              <dt className="muted">Simulated clock now</dt><dd style={{ margin: 0 }}>{fmtDate(adv.sim_now, true)}</dd>
-              <dt className="muted">Outcomes recorded</dt><dd style={{ margin: 0 }} className="num">{fmtNum(adv.outcomes_recorded)}</dd>
-              <dt className="muted">Memory written</dt>
-              <dd style={{ margin: 0 }} className="row">{adv.memory_written.length ? adv.memory_written.map((m) => <span key={m} className="chip chip--mono">{m}</span>) : <span className="muted">none</span>}</dd>
-              <dt className="muted">Routine outputs</dt>
-              <dd style={{ margin: 0 }}>
-                {adv.routine_outputs && adv.routine_outputs.length
-                  ? adv.routine_outputs.map((r) => <div key={r.routine_id} className="row" style={{ flexWrap: "wrap" }}><span className="mono">{r.routine_id}</span>{r.outputs.map((o) => <span key={o} className="chip chip--mono">{o}</span>)}</div>)
-                  : <span className="muted">none (no approved routines)</span>}
-              </dd>
-            </dl>
-            <div className="row" style={{ flexWrap: "wrap" }}>
-              <Link className={buttonClass("ghost", "sm")} href="/app/outcomes">See Outcomes</Link>
-              <Link className={buttonClass("ghost", "sm")} href="/app/workflows">See Workflows</Link>
-            </div>
-          </div>
-        ) : null}
-      </StepCard>
-
-          </div>
-        ),
-      }}
-      actions={ref ? <Link className={buttonClass("primary")} href={`/app/incidents/${ref}`}>Open {ref}</Link> : <Button variant="primary" onClick={doInject} disabled={busy !== null}>Start: inject a scenario</Button>}
+      ) : undefined}
     >
-      <Details title="Reset the simulation" defaultOpen={mode === "detailed" || resetDone}>
-      <StepCard n={5} title="Reset" done={resetDone}
-        caption="Restores the simulated state so the demo can run again. It never deletes Engineering Notebook entries or human-authored memory.">
-        <div className="row"><Button variant="danger" onClick={doReset} disabled={busy !== null}>{busy === "reset" ? "Resetting…" : "Reset simulated state"}</Button></div>
-        {stepErr("reset")}
-        {resetDone ? <p style={{ margin: 0, fontSize: "var(--fs-13)" }}>Simulated state restored.</p> : null}
-      </StepCard>
-      </Details>
+      <Tabs label="Lab mode" value={tab} onChange={setTab} tabs={[
+        { id: "library", label: "Scenario library", content: library },
+        { id: "live", label: "Live loop on today's data", content: <LiveLoop /> },
+      ]} />
     </PageTemplate>
   );
 }
