@@ -16,43 +16,25 @@ async function setA23(page: Page, on: boolean) {
 
 test.describe.configure({ mode: "serial" });
 
-test("Home after Enter Strata: no metrics, no charts, no briefing until the click", async ({ page }) => {
+test("Home leads with today's numbers, then the briefing is one click away", async ({ page }) => {
   const errors = collectConsoleErrors(page);
-  await page.goto("/", { waitUntil: "networkidle" });
-  await page.getByRole("link", { name: "Enter Strata" }).click();
-  await expect(page).toHaveURL(/\/app\/?$/);
-  await expect(page.getByTestId("home-welcome")).toBeVisible();
-  await page.waitForLoadState("networkidle");
-
-  await expect(page.locator("[data-metric]")).toHaveCount(0);
-  await expect(page.locator('.echarts-for-react, [role=img][aria-label*="chart" i]')).toHaveCount(0);
-  const show = page.getByRole("link", { name: "Show today's briefing" });
-  await expect(show).toBeVisible();
-  // briefing content is absent on Home
-  await expect(page.getByTestId("takeaway")).toHaveCount(0);
-  await expect(page.getByTestId("briefing-priorities")).toHaveCount(0);
-  await expect(page.getByText(/signals across/i)).toHaveCount(0);
-
-  await show.click();
+  await page.goto("/app", { waitUntil: "networkidle" });
+  await expect(page.getByTestId("home-welcome")).toContainText(/Overnight I checked/);
+  // the summaries the owner asked for: yesterday, last 7 days, pipeline, trends, numbers, what you missed
+  for (const id of ["Yesterday", "Last 7 days", "Look what you missed"]) {
+    await expect(page.getByRole("heading", { name: id }).first()).toBeVisible();
+  }
+  await page.getByTestId("show-briefing").click();
   await expect(page).toHaveURL(/\/app\/briefing$/);
-  await expect(page.getByTestId("takeaway")).toContainText(/signals across/i);
-  await expect(page.locator('[data-metric-group][aria-label="Since the last scan"] [data-metric]')).toHaveCount(3);
-  await expect(page.locator("[data-metric]")).toHaveCount(3);
   await expect(page.getByTestId("briefing-priorities").or(page.getByText("Nothing needs you today"))).toBeVisible();
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
-test("Home shows six path cards, a persona picker and a loop diagram with six links", async ({ page }) => {
+test("Home has no role picker and no loop diagram (role comes from login; the loop lives in How it works)", async ({ page }) => {
   await page.goto("/app", { waitUntil: "networkidle" });
-  await expect(page.locator(".home-path")).toHaveCount(6);
-  await expect(page.getByTestId("persona-picker").getByRole("radio")).toHaveCount(6);
-  const loop = page.getByTestId("diagram-loop");
-  await expect(loop.getByRole("link")).toHaveCount(6);
-  const hrefs = await loop.locator("a").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
-  expect(hrefs).toEqual(["/app/sources", "/app/problems", "/app/incidents", "/app/memory", "/app/approvals", "/app/outcomes"]);
-  await loop.getByRole("link", { name: /Observe/ }).focus();
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/app\/sources$/);
+  await expect(page.getByTestId("persona-picker")).toHaveCount(0);
+  await expect(page.getByTestId("diagram-loop")).toHaveCount(0);
+  await expect(page.getByTestId("run-simulation")).toBeVisible();
 });
 
 test("guided path: start, Next x5 to step 6, exit", async ({ page }) => {

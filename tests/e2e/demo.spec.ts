@@ -24,22 +24,14 @@ test.afterAll(async ({ request }) => { await resetEngine(request); });
 test("demo journey: home -> briefing on click -> case -> approve -> outcome -> learned -> audit", async ({ page }) => {
   const errors = collectConsoleErrors(page);
 
-  // Landing -> Home
-  await page.goto("/", { waitUntil: "networkidle" });
-  await page.getByRole("link", { name: "Enter Strata" }).click();
-  await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByTestId("page-template")).toBeVisible();
-  await expect(page.locator("[data-metric]")).toHaveCount(0); // no floating numbers on Home
-  const showBriefing = page.getByRole("link", { name: /Show today's briefing/i }).or(page.getByRole("button", { name: /Show today's briefing/i }));
-  await expect(showBriefing.first()).toBeVisible();
-  await expect(page.getByText(/Overnight Strata checked/)).toHaveCount(0); // news only on click
+  // Home (signed in): today's numbers first, then the briefing one click away
+  await page.goto("/app", { waitUntil: "networkidle" });
+  await expect(page.getByTestId("home-welcome")).toContainText(/Overnight I checked/);
   await shot(page, "01-home");
 
-  // Briefing appears only after the click
-  await showBriefing.first().click();
+  await page.getByTestId("show-briefing").click();
   await expect(page).toHaveURL(/\/app\/briefing/);
-  await expect(page.getByText(/Overnight Strata checked/)).toBeVisible();
-  await expect(page.getByText(HERO).first()).toBeVisible();
+  await expect(page.getByTestId("briefing-priorities")).toBeVisible();
   await shot(page, "02-briefing");
 
   // Case file: stage tracker + three tabs

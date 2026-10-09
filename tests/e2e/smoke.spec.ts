@@ -30,8 +30,15 @@ test("landing", async ({ page }) => {
   await expect(page.getByText("Arihant Chordia", { exact: false })).toBeVisible();
   await expect(page.getByText("Yogesh R Mehta", { exact: false })).toBeVisible();
   await expect(page.getByText("District 05", { exact: false }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Enter Strata" })).toBeVisible();
   await page.screenshot({ path: join(SCREENS, "landing.png"), fullPage: true });
+  // starter -> how it works (loop diagram) -> game tutorial -> portals
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByTestId("diagram-loop")).toBeVisible();
+  await page.getByRole("button", { name: "Play the tutorial" }).click();
+  await expect(page.getByTestId("game-tutorial")).toBeVisible();
+  await page.getByRole("button", { name: "Skip" }).click();
+  await expect(page.getByText("Company portal")).toBeVisible();
+  await expect(page.getByText("User portal")).toBeVisible();
   expect(errors).toEqual([]);
 });
 

@@ -162,26 +162,26 @@ export default function HelpPage() {
   const nMetrics = data?.items.length ?? 0;
   const nTerms = Object.keys(TERMS).length;
   const takeaway = data
-    ? `${entries.length} entries: ${nMetrics} metrics and signals, ${nTerms} terms, ${CATEGORIES.length} problem categories and ${STAGES.length} workflow stages.`
+    ? `${nMetrics} metrics, ${nTerms} terms, ${CATEGORIES.length} problem categories and ${STAGES.length} workflow stages.`
     : "Loading the metric dictionary.";
 
   return (
     <PageTemplate
       explainKey="help"
       title="Help and glossary"
-      question="What does this number or word mean, and what should I do about it?"
+      question="What a number or word means, and what to do about it."
       visual={{
         takeaway,
         node: (
           <div className="stack">
             <div className="help-search" role="search">
-              <label htmlFor={inputId}>Search the glossary</label>
+              <label htmlFor={inputId} className="sr-only">Search the glossary</label>
               <input
                 id={inputId}
                 type="search"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="e.g. risk score, fill rate, baseline"
+                placeholder="Search: risk score, fill rate, baseline…"
                 aria-describedby={countId}
                 data-testid="glossary-search"
                 autoComplete="off"

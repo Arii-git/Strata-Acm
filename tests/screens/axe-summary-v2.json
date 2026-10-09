@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-09T21:51:34.694Z",
+  "generated_at": "2026-10-09T21:58:09.110Z",
   "tags": [
     "wcag2a",
     "wcag2aa",
@@ -9,12 +9,46 @@
   ],
   "counts": {
     "critical": 0,
-    "serious": 0,
+    "serious": 3,
     "routes_checked": 46,
     "routes_skipped": 0,
     "routes_error": 0
   },
   "skipped": [],
   "errors": [],
-  "violations": []
+  "violations": [
+    {
+      "path": "/app",
+      "mode": "simple",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "targets": [
+        ".sl-word:nth-child(2)"
+      ]
+    },
+    {
+      "path": "/app/approvals",
+      "mode": "detailed",
+      "id": "link-in-text-block",
+      "impact": "serious",
+      "help": "Links must be distinguishable without relying on color",
+      "nodes": 1,
+      "targets": [
+        ".aq__clock > a[href$=\"agents\"]"
+      ]
+    },
+    {
+      "path": "/app/approvals",
+      "mode": "simple",
+      "id": "link-in-text-block",
+      "impact": "serious",
+      "help": "Links must be distinguishable without relying on color",
+      "nodes": 1,
+      "targets": [
+        ".aq__clock > a[href$=\"agents\"]"
+      ]
+    }
+  ]
 }

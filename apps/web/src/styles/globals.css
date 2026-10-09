@@ -382,14 +382,15 @@ button.ev-chip:hover { border-color: var(--indigo-600); background: var(--indigo
 @keyframes sl-core { 0%, 100% { opacity: .55; transform: rotate(45deg) scale(.9); } 50% { opacity: .95; transform: rotate(45deg) scale(1); } }
 .sl-text { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
 .sl-words { display: grid; justify-items: center; }
-.sl-word { grid-area: 1 / 1; opacity: 0; font-family: var(--font-brand); font-weight: 500; font-size: var(--fs-12); color: var(--ink-2); letter-spacing: .01em; animation: sl-word 3.6s var(--ease) infinite; }
+.sl-word { grid-area: 1 / 1; visibility: hidden; font-family: var(--font-brand); font-weight: 500; font-size: var(--fs-12); color: var(--ink-2); letter-spacing: .01em; animation: sl-word 3.6s var(--ease) infinite; }
 .sl--lg .sl-word { font-size: var(--fs-13); }
 @keyframes sl-word {
-  0% { opacity: 0; transform: translateY(3px); }
-  3% { opacity: 1; transform: none; }
-  14% { opacity: 1; transform: none; }
-  16.66% { opacity: 0; transform: translateY(-3px); }
-  100% { opacity: 0; }
+  /* visibility + clip (never partial opacity), so the word always meets contrast while it is shown */
+  0% { visibility: visible; clip-path: inset(0 0 100% 0); transform: translateY(3px); }
+  3% { visibility: visible; clip-path: inset(0); transform: none; }
+  14% { visibility: visible; clip-path: inset(0); transform: none; }
+  16.66% { visibility: hidden; clip-path: inset(100% 0 0 0); transform: translateY(-3px); }
+  100% { visibility: hidden; }
 }
 .sl-label { font-size: var(--fs-12); color: var(--ink-3); max-width: 40ch; }
 .sl--md .sl-label { font-size: var(--fs-11); }
