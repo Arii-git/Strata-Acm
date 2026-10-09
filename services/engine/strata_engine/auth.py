@@ -33,7 +33,7 @@ import yaml
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
-from . import mailer, state
+from . import authdb, mailer, state
 from .config import ROLE_LABELS, ROOT, STORE_DIR
 
 router = APIRouter(tags=["auth"])
@@ -65,12 +65,14 @@ create table if not exists sessions (jti text primary key, user_id text not null
 
 
 def _db():
-    return state._C
+    """Supabase Postgres when SUPABASE_DB_URL is set (schema created by a Supabase migration), else sqlite."""
+    return authdb.connection()
 
 
-with state._lock:
-    _db().executescript(SCHEMA)
-    _db().commit()
+if authdb.backend() == "sqlite":
+    with state._lock:
+        _db().executescript(SCHEMA)
+        _db().commit()
 
 
 # ------------------------------------------------------------------ secret, hashing, tokens
