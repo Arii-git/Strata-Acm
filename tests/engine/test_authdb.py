@@ -19,3 +19,10 @@ def test_row_allows_key_and_index():
 def test_default_backend_is_sqlite(monkeypatch):
     monkeypatch.delenv("SUPABASE_DB_URL", raising=False)
     assert backend() == "sqlite"
+
+
+def test_unreachable_supabase_falls_back_to_sqlite(monkeypatch):
+    from strata_engine import authdb, state
+    monkeypatch.setenv("SUPABASE_DB_URL", "postgresql://u:p@127.0.0.1:1/none")
+    authdb._REACHABLE.clear()
+    assert authdb.backend() == "sqlite" and authdb.connection() is state._C

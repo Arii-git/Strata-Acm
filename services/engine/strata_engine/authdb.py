@@ -94,16 +94,36 @@ class PgConn:
 
 
 _PG: PgConn | None = None
+_REACHABLE: dict[str, bool] = {}
+
+
+def _reachable(url: str) -> bool:
+    """One quick probe per URL per process. Networks that block port 6543/5432 must not hang the engine."""
+    if url not in _REACHABLE:
+        try:
+            import psycopg
+            with psycopg.connect(url, prepare_threshold=None, connect_timeout=5) as c:
+                c.execute("select 1")
+            _REACHABLE[url] = True
+        except Exception as exc:
+            log.warning("auth: Supabase unreachable (%s); using the local sqlite login database instead", type(exc).__name__)
+            _REACHABLE[url] = False
+    return _REACHABLE[url]
+
+
+def _url() -> str:
+    url = os.environ.get("SUPABASE_DB_URL", "").strip()
+    return url if url and _reachable(url) else ""
 
 
 def backend() -> str:
-    return "supabase" if os.environ.get("SUPABASE_DB_URL", "").strip() else "sqlite"
+    return "supabase" if _url() else "sqlite"
 
 
 def connection() -> Any:
     """The login database connection (shared, used under state._lock like the sqlite one)."""
     global _PG
-    url = os.environ.get("SUPABASE_DB_URL", "").strip()
+    url = _url()
     if not url:
         from . import state
         return state._C
