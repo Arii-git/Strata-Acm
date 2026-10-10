@@ -32,6 +32,10 @@ services:
       SMTP_USER:
       SMTP_PASSWORD:
       SMTP_FROM:
+      SUPABASE_DB_URL:
+      SUPABASE_URL:
+      SUPABASE_PUBLISHABLE_KEY:
+      STRATA_DEMO_LOGINS:
     ports:
       - "${ENGINE_PORT:-8000}:8000"
     volumes:
