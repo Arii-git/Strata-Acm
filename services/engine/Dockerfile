@@ -60,7 +60,7 @@ COPY services/engine/ /app/services/engine/
 RUN mkdir -p /app/data/store && chown -R strata:strata /app/data/store
 
 USER strata
-# No VOLUME instruction: Railway rejects it. docker-compose.yml mounts the named volume itself.
+VOLUME ["/app/data/store"]
 EXPOSE 8000
 
 # python:slim has no curl; use the stdlib. Start period covers the first-boot seed.
@@ -68,5 +68,5 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=600s --retries=6 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
 
 ENTRYPOINT ["/usr/local/bin/strata-entrypoint"]
-# '::' listens on IPv6 and IPv4 (Railway's private network is IPv6). Single worker on purpose: the engine keeps in-memory state (detections, lab injections) per process.
-CMD ["uvicorn", "strata_engine.app:app", "--app-dir", "/app/services/engine", "--host", "::", "--port", "8000"]
+# Single worker on purpose: the engine keeps in-memory state (detections, lab injections) per process.
+CMD ["uvicorn", "strata_engine.app:app", "--app-dir", "/app/services/engine", "--host", "0.0.0.0", "--port", "8000"]
